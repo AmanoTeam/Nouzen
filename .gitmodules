@@ -1,0 +1,30 @@
+[submodule "submodules/cabundle"]
+	path = submodules/cabundle
+	url = https://github.com/AmanoTeam/CABundle
+[submodule "submodules/curl"]
+	path = submodules/curl
+	url = https://github.com/curl/curl
+[submodule "submodules/bearssl"]
+	path = submodules/bearssl
+	url = https://www.bearssl.org/git/BearSSL
+[submodule "submodules/nghttp2"]
+	path = submodules/nghttp2
+	url = https://github.com/nghttp2/nghttp2
+[submodule "submodules/libarchive"]
+	path = submodules/libarchive
+	url = https://github.com/libarchive/libarchive
+[submodule "submodules/xz-utils"]
+	path = submodules/xz-utils
+	url = https://github.com/tukaani-project/xz
+[submodule "submodules/zlib"]
+	path = submodules/zlib
+	url = https://github.com/madler/zlib
+[submodule "submodules/zstd"]
+	path = submodules/zstd
+	url = https://github.com/facebook/zstd
+[submodule "submodules/patchelf"]
+	path = submodules/patchelf
+	url = https://github.com/NixOS/patchelf
+[submodule "submodules/bzip2"]
+	path = submodules/bzip2
+	url = https://gitlab.com/federicomenaquintero/bzip2

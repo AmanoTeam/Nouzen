@@ -1,0 +1,129 @@
+name: Build
+
+on:
+  push:
+    branches:
+        - '**'
+    paths:
+        - '**.c'
+        - '**.h'
+        - '**.sh'
+        - 'CMakeLists.txt'
+        - 'submodules/**'
+        - '.github/workflows/build.yml'        
+
+jobs:
+  build:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@main
+      with:
+        submodules: true
+    - name: Setup OBGGCC cross-compiler 
+      run: |
+        declare -r OBGGCC_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
+        declare -r OBGGCC_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r OBGGCC_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${OBGGCC_URL}" --output "${OBGGCC_TARBALL}"
+        tar --directory="$(dirname "${OBGGCC_TARBALL}")" --extract --file="${OBGGCC_TARBALL}"
+        
+        echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
+        echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
+    - name: Build with CMake
+      run: |
+        declare -ra targets=(
+        	aarch64-unknown-linux-gnu2.19
+        	arm-unknown-linux-gnueabihf2.13
+        	mips64el-unknown-linux-gnuabi642.24
+        	powerpc64le-unknown-linux-gnu2.19
+        	s390x-unknown-linux-gnu2.13
+            sparc-unknown-linux-gnu2.11
+            ia64-unknown-linux-gnu2.11
+            x86_64-unknown-linux-gnu2.11
+            arm-unknown-linux-gnueabi2.11
+            i386-unknown-linux-gnu2.11
+            mipsel-unknown-linux-gnu2.11
+            mips-unknown-linux-gnu2.11
+            powerpc-unknown-linux-gnu2.11
+            s390-unknown-linux-gnu2.11
+        )
+        
+        declare -r source_directory="${PWD}"
+        
+        declare -r output_directory="$(realpath './output')"
+        mkdir --parent "${output_directory}"
+        
+        for target in "${targets[@]}"; do
+            (
+                declare toolchain_file="${OBGGCC_HOME}/usr/local/share/obggcc/cmake/${target}.cmake"
+                declare extra_c_flags=''
+                
+                target="${target%2.*}"
+                
+                declare build_directory="${PWD}/${target}-build"
+                declare install_prefix="${build_directory}/${target}"
+                
+                if [ "${target}" = 'aarch64-unknown-linux-gnu' ]; then
+                	extra_c_flags+='-DHWCAP_CRC32=128'
+                fi
+                
+                if [ "${target}" = 'sparc-unknown-linux-gnu' ]; then
+                	extra_c_flags+='-latomic'
+                fi
+                
+                cmake \
+                    -B "${build_directory}" \
+                    -S "${source_directory}" \
+                    -DNOUZEN_ENABLE_LTO='ON' \
+                    -DCMAKE_C_FLAGS="${extra_c_flags}" \
+                    -DCMAKE_TOOLCHAIN_FILE="${toolchain_file}" \
+                    -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
+                    -DCMAKE_BUILD_TYPE='MinSizeRel' 1>/dev/null
+                
+                echo "- Building project"
+                
+                cmake --build "${build_directory}"  -- --jobs='1'
+                
+                echo "- Installing project"
+                
+                cmake --install "${build_directory}" --strip
+                
+                echo "- Creating compressed archive"
+                
+                pushd "$(dirname "${install_prefix}")"
+                
+                if [[ "${target}" == *'mingw32' ]]; then
+                    zip --recurse-paths -9 "${output_directory}/${target}.zip" "${target}" 1>/dev/null
+                else
+                    tar --create --file=- "${target}" |  xz --extreme --threads='0' --compress -9 > "${output_directory}/${target}.tar.xz"
+                fi
+                
+                rm --force --recursive "${build_directory}"
+                
+            )
+        done
+    - name: Upload artifact
+      uses: actions/upload-artifact@main
+      with:
+        path: ./output
+    - name: Get tag name for release
+      if: startsWith(github.event.head_commit.message, 'Bump version')
+      run: echo "VERSION_TAG=${COMMIT_MESSAGE/* }" >> "${GITHUB_ENV}"
+      env:
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    - name: Create release
+      if: startsWith(github.event.head_commit.message, 'Bump version')
+      uses: softprops/action-gh-release@master
+      with:
+        tag_name: v${{ env.VERSION_TAG }}
+        name: Nouzen v${{ env.VERSION_TAG }}
+        files: ./output/*
+        draft: true
+        prerelease: false
+        fail_on_unmatched_files: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
