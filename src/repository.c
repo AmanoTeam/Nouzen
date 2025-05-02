@@ -1661,9 +1661,9 @@ int repolist_resolve_related(
 	
 }
 
-int repolist_check_loops(
+int repolist_fix_loops(
 	const repolist_t* const list,
-	const pkg_t* const pkg
+	pkg_t* const pkg
 ) {
 	
 	int err = APTERR_SUCCESS;
@@ -1720,6 +1720,12 @@ int repolist_check_loops(
 			
 			if (pkglist_split_next(&split, &part) == NULL) {
 				*start = '\0';
+				
+				if (start == pkg->depends) {
+					free(pkg->depends);
+					pkg->depends = NULL;
+				}
+				
 				goto end;
 			}
 			
@@ -1762,6 +1768,12 @@ int repolist_check_loops(
 			
 			if (pkglist_split_next(&subsplit, &subpart) == NULL) {
 				*start = '\0';
+				
+				if (start == dependency->depends) {
+					free(dependency->depends);
+					dependency->depends = NULL;
+				}
+				
 				goto end;
 			}
 			
@@ -1828,7 +1840,7 @@ int repolist_resolve_deps(
 	err = APTERR_PACKAGE_DEPENDENCY_LOOP;
 	
 	while (err == APTERR_PACKAGE_DEPENDENCY_LOOP) {
-		err = repolist_check_loops(list, pkg);
+		err = repolist_fix_loops(list, pkg);
 	}
 	
 	if (err != APTERR_SUCCESS) {
