@@ -4,10 +4,11 @@ declare -r APP_DIRECTORY="$(realpath "$(( [ -n "${BASH_SOURCE}" ] && dirname "$(
 
 declare action
 declare packages
+declare arg
 declare args
 
 while [[ $# -gt 0 ]]; do
-	
+	echo $1
 	if [ "${1}" = 'update' ]; then
 		action='--update'
 	elif [ "${1}" = 'install' ]; then
@@ -16,19 +17,33 @@ while [[ $# -gt 0 ]]; do
 		action='--destroy'
 	elif [ "${1}" = 'remove' ] || [ "${1}" = 'uninstall' ] || [ "${1}" = 'autoremove' ] || [ "${1}" = 'purge' ]; then
 		action='--uninstall'
+	elif [[ "${1}" = '-p' || "${1}" = '--prefix' || "${1}" = '--install-prefix' || \
+		"${1}" = '-c' || "${1}" = '--concurrency' || "${1}" = '--parallelism' || \
+		"${1}" = '--loglevel' ]]; then
+		arg+="${1}='${2}'"
+		shift
 	elif [[ "${1}" == '-'* ]]; then
 		args+="${1} "
 	else
+		if ! [[ "${action}" = '--install' || "${action}" = '--uninstall' ]]; then
+			echo "fatal error: This argument is invalid or was not recognized: ${1}" 1>&2
+			exit '1'
+		fi
+		
 		packages+="${1};"
 	fi
 	
-  shift
+	if [ -n "${arg}" ]; then
+		args+="${arg} " && arg=''
+	fi
+	
+	shift
 done
 
 if [ -n "${packages}" ]; then
-	"${APP_DIRECTORY}/nz" ${args} ${action} "${packages}"
-else
-	"${APP_DIRECTORY}/nz" ${args} ${action}
+	packages="'${packages}'"
 fi
+
+eval "${APP_DIRECTORY}/nz" ${args} ${action} ${packages}
 
 exit "${?}"
