@@ -8,7 +8,7 @@ declare arg
 declare args
 
 while [[ $# -gt 0 ]]; do
-	echo $1
+	
 	if [ "${1}" = 'update' ]; then
 		action='--update'
 	elif [ "${1}" = 'install' ]; then
