@@ -316,7 +316,7 @@ char* get_app_filename(void) {
 			goto end;
 		}
 	#else
-		int wsize = 0;
+		ssize_t wsize = 0;
 		
 		app_filename = malloc(PATH_MAX);
 		

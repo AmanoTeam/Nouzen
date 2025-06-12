@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <string.h>
+
 #include "fs/sep.h"
 #include "fs/basename.h"
 

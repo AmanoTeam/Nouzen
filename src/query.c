@@ -290,7 +290,7 @@ bigfloat_t param_get_float(const hquery_param_t* const param) {
 	const int err = get_numeric_value(HQUERY_FLOAT, param->value, &value);
 	
 	if (err != 0) {
-		return BIGINT_MAX;
+		return BIGFLOAT_MAX;
 	}
 	
 	return *(bigfloat_t*) &value;
@@ -377,7 +377,7 @@ int query_add_string(
 	end:;
 	
 	if (err != 0) {
-		parameter_free(&parameter);
+		param_free(&parameter);
 	}
 	
 	return err;
@@ -516,7 +516,7 @@ size_t query_dump_string(
 	
 }
 
-void parameter_free(hquery_param_t* const parameter) {
+void param_free(hquery_param_t* const parameter) {
 	
 	free(parameter->key);
 	parameter->key = NULL;
@@ -532,7 +532,7 @@ void query_free(hquery_t* const query) {
 	
 	for (index = 0; index < query->offset; index++) {
 		hquery_param_t* const parameter = &query->parameters[index];
-		parameter_free(parameter);
+		param_free(parameter);
 	}
 	
 	query->size = 0;
@@ -604,14 +604,14 @@ int query_load_string(
 		strsplit_next(&subsplit, &subpart);
 		
 		if (subpart.begin == NULL) {
-			parameter_free(&param);
+			param_free(&param);
 			continue;
 		}
 		
 		strsplit_resize(&split, &subpart);
 		
 		if (subpart.size == 0) {
-			parameter_free(&param);
+			param_free(&param);
 			continue;
 		}
 		
@@ -645,7 +645,7 @@ int query_load_string(
 	}
 	
 	if (err != 0) {
-		parameter_free(&param);
+		param_free(&param);
 		query_free(query);
 	}
 	
