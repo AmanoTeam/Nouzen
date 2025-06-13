@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
 
 project(
 	Nouzen
-	VERSION 0.1
+	VERSION 0.1-alpha3
 	DESCRIPTION "A command-line utility to download and install packages from APT repositories."
 	HOMEPAGE_URL "https://github.com/AmanoTeam/Nouzen"
 	LANGUAGES C CXX
