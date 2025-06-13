@@ -20,11 +20,11 @@ This file is auto-generated. Use the tool at ../tools/program_help.h.py to regen
 	"                        Specify a semicolon-separated (;) list of packages to uninstall.\n"\
 	"  -c CONCURRENCY, --concurrency CONCURRENCY\n"\
 	"                        Specify how many packages should be downloaded simultaneously. Pass (0) to use the number of available CPU cores or (1) to disable parallelism.\n"\
-	"  -f, --force-refresh   Invalidate the cached repository index and force a refresh of the package list. The main difference between this and --update is that you can use it in combination with -i/--install.\n"\
+	"  -f, --force-refresh   Invalidate the cached repository index and force a refresh of the package list.\n"\
 	"  -p PREFIX, --prefix PREFIX\n"\
 	"                        Specify the install location for packages.\n"\
 	"  -y, --assume-yes      Assume 'yes' for all prompts and run in non-interactive mode.\n"\
-	"  --loglevel LOGLEVEL   Set the logging level to show more or fewer logs. Options are 'quiet', 'standard', 'warning', 'error', or 'verbose'. The default is a combination of 'standard', 'warning', and 'error'.\n"\
+	"  --loglevel LOGLEVEL   Set the logging level to show more or fewer logs. Options are 'quiet', 'standard', 'warning', 'error', or 'verbose'.\n"\
 	"\n"\
 	"Note, options that take an argument require a equal sign. E.g. --install=PACKAGE\n"\
 
