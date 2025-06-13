@@ -12,6 +12,9 @@ on:
         - 'submodules/**'
         - '.github/workflows/build.yml'        
 
+permissions:
+  contents: write
+
 jobs:
   build:
     concurrency:
