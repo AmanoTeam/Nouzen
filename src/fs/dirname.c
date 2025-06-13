@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "fs/stripsep.h"
+#include "fs/dirname.h"
 #include "fs/basename.h"
 
 char* dirname(const char* const path) {
@@ -20,10 +22,13 @@ char* dirname(const char* const path) {
 		return NULL;
 	}
 	
-	memcpy(directory, path, size);
+	if (size > 0) {
+		memcpy(directory, path, size);
+	}
+	
 	directory[size] = '\0';
 	
-	strip_sep(directory);
+	strip_path_sep(directory);
 	
 	return directory;
 	

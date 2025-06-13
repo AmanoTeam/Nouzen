@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
 
 project(
 	Nouzen
-	VERSION 0.1-alpha3
+	VERSION 0.1
 	DESCRIPTION "A command-line utility to download and install packages from APT repositories."
 	HOMEPAGE_URL "https://github.com/AmanoTeam/Nouzen"
 	LANGUAGES C CXX
@@ -596,6 +596,12 @@ add_subdirectory(
 add_subdirectory(
 	"${NGHTTP2_SOURCE_DIRECTORY}"
 	EXCLUDE_FROM_ALL
+)
+
+target_compile_definitions(
+	libzstd_shared
+	PRIVATE
+	ZDICT_QSORT=ZDICT_QSORT_MIN
 )
 
 if (NOT WIN32)
