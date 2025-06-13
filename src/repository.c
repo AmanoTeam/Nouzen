@@ -1404,7 +1404,7 @@ pkg_t* pkgs_get_virt_pkg(
 	strsplit_t split = {0};
 	strsplit_part_t part = {0};
 	
-	size = strlen(name);
+	size = strlen(name) + 1;
 	
 	for (index = 0; index < pkgs->offset; index++) {
 		pkg = pkgs->items[index];
@@ -2058,6 +2058,8 @@ int repolist_get_dependants(
 	pkgs_iter_t iter = {0};
 	pkgs_iter_t subiter = {0};
 	
+	const size_t size = strlen(dependency->name) + 1;
+	
 	loggln(LOG_VERBOSE, "Fetching dependants on dependency '%s'", dependency->name);
 	
 	for (index = 0; index < list->offset; index++) {
@@ -2090,7 +2092,7 @@ int repolist_get_dependants(
 				strsplit_init(&split, pkg->depends, ",");
 				
 				while (pkglist_split_next(&split, &part) != NULL) {
-					matches = strncmp(dependency->name, part.begin, part.size) == 0;
+					matches = strncmp(dependency->name, part.begin, size) == 0;
 					
 					if (matches) {
 						break;

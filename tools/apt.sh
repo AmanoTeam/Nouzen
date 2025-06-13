@@ -7,7 +7,11 @@ declare packages
 declare arg
 declare args
 
-while [[ $# -gt 0 ]]; do
+if [ "${#}" = '0' ]; then
+	args+='--help'
+fi
+
+while [[ "${#}" -gt '0' ]]; do
 	
 	if [ "${1}" = 'update' ]; then
 		action='--update'

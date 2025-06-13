@@ -63,7 +63,7 @@ parser.add_argument(
 	"--force-refresh",
 	required = False,
 	action = "store_true",
-	help = "Invalidate the cached repository index and force a refresh of the package list. The main difference between this and --update is that you can use it in combination with -i/--install."
+	help = "Invalidate the cached repository index and force a refresh of the package list."
 )
 
 parser.add_argument(
