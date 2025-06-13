@@ -19,6 +19,8 @@
 #include "wcurl.h"
 #include "program_help.h"
 #include "os/cpu.h"
+#include "distros.h"
+#include "nouzen.h"
 
 #define PKGS_QUEUE_MAX (128)
 
@@ -184,6 +186,7 @@ int main(int argc, argv_t* argv[]) {
 	int operation = 0;
 	ssize_t nproc = 0;
 	
+	char* operating_system = NULL;
 	char* config_dir = NULL;
 	
 	char* value = NULL;
@@ -227,6 +230,13 @@ int main(int argc, argv_t* argv[]) {
 	
 	if (wcurl == NULL) {
 		err = APTERR_WCURL_INIT_FAILURE;
+		goto end;
+	}
+	
+	operating_system = get_platform();
+	
+	if (operating_system == NULL) {
+		err = APTERR_PLATFORM_UNKNOWN;
 		goto end;
 	}
 	
@@ -352,6 +362,10 @@ int main(int argc, argv_t* argv[]) {
 				printf("%s", PROGRAM_HELP);
 				goto end;
 			}
+			case ACTION_VERSION: {
+				printf("%s v%s (%s)\n", PROJECT_NAME, PROJECT_VERSION, operating_system);
+				goto end;
+			}
 			case ACTION_UNKNOWN: {
 				err = APTERR_ARGPARSE_ARGUMENT_INVALID;
 				goto end;
@@ -425,6 +439,7 @@ int main(int argc, argv_t* argv[]) {
 	sslcerts_unload_certificates();
 	
 	free(config_dir);
+	free(operating_system);
 	
 	repolist_free(&list);
 	argparse_free(&argparse);
