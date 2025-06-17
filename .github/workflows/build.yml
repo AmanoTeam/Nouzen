@@ -36,8 +36,6 @@ jobs:
         
         echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
-        
-        ln --symbolic "${OBGGCC_HOME}/usr/local/share/obggcc/"*'/'* '/tmp'
     - name: Setup Pino cross-compiler 
       run: |
         declare -r PINO_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Pino/releases/latest')")"
@@ -49,8 +47,6 @@ jobs:
         
         echo 'PINO_HOME=/tmp/pino' >> "${GITHUB_ENV}"
         echo '/tmp/pino/bin' >> "${GITHUB_PATH}"
-        echo "${PINO_HOME}/usr/local/share/pino"
-        ln --symbolic "${PINO_HOME}/usr/local/share/pino/"*'/'* '/tmp'
     - name: Build with CMake
       run: |
         declare -ra targets=(
@@ -68,6 +64,9 @@ jobs:
         
         declare -r output_directory="$(realpath './output')"
         mkdir --parent "${output_directory}"
+        
+        ln --symbolic "${OBGGCC_HOME}/usr/local/share/obggcc/"*'/'* '/tmp'
+        ln --symbolic "${PINO_HOME}/usr/local/share/pino/"*'/'* '/tmp'
         
         for target in "${targets[@]}"; do
             (
