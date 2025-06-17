@@ -36,23 +36,32 @@ jobs:
         
         echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
+        
+        ln --symbolic "${OBGGCC_HOME}/usr/local/share/obggcc/"*'/'* '/tmp'
+    - name: Setup Pino cross-compiler 
+      run: |
+        declare -r PINO_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Pino/releases/latest')")"
+        declare -r PINO_TARBALL='/tmp/toolchain.tar.xz'
+        declare -r PINO_URL="https://github.com/AmanoTeam/Pino/releases/download/${PINO_TAG}/x86_64-unknown-linux-gnu.tar.xz"
+        
+        curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --location --url "${PINO_URL}" --output "${PINO_TARBALL}"
+        tar --directory="$(dirname "${PINO_TARBALL}")" --extract --file="${PINO_TARBALL}"
+        
+        echo 'PINO_HOME=/tmp/pino' >> "${GITHUB_ENV}"
+        echo '/tmp/pino/bin' >> "${GITHUB_PATH}"
+        
+        ln --symbolic "${OBGGCC_HOME}/usr/local/share/pino/"*'/'* '/tmp'
     - name: Build with CMake
       run: |
         declare -ra targets=(
         	aarch64-unknown-linux-gnu2.19
         	arm-unknown-linux-gnueabihf2.13
-        	mips64el-unknown-linux-gnuabi642.24
-        	powerpc64le-unknown-linux-gnu2.19
-        	s390x-unknown-linux-gnu2.13
-            sparc-unknown-linux-gnu2.11
-            ia64-unknown-linux-gnu2.11
             x86_64-unknown-linux-gnu2.11
-            arm-unknown-linux-gnueabi2.11
             i386-unknown-linux-gnu2.11
-            mipsel-unknown-linux-gnu2.11
-            mips-unknown-linux-gnu2.11
-            powerpc-unknown-linux-gnu2.11
-            s390-unknown-linux-gnu2.11
+            x86_64-unknown-linux-android
+            i686-unknown-linux-android
+            arm-unknown-linux-androideabi
+            aarch64-unknown-linux-android
         )
         
         declare -r source_directory="${PWD}"
@@ -62,7 +71,7 @@ jobs:
         
         for target in "${targets[@]}"; do
             (
-                declare toolchain_file="${OBGGCC_HOME}/usr/local/share/obggcc/cmake/${target}.cmake"
+                declare toolchain_file="/tmp/${target}.cmake"
                 declare extra_c_flags=''
                 
                 target="${target%2.*}"
@@ -81,7 +90,7 @@ jobs:
                 cmake \
                     -B "${build_directory}" \
                     -S "${source_directory}" \
-                    -DNOUZEN_ENABLE_LTO='ON' \
+                    -DNOUZEN_ENABLE_LTO='OFF' \
                     -DCMAKE_C_FLAGS="${extra_c_flags}" \
                     -DCMAKE_TOOLCHAIN_FILE="${toolchain_file}" \
                     -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
