@@ -50,7 +50,7 @@ jobs:
         echo 'PINO_HOME=/tmp/pino' >> "${GITHUB_ENV}"
         echo '/tmp/pino/bin' >> "${GITHUB_PATH}"
         
-        ln --symbolic "${OBGGCC_HOME}/usr/local/share/pino/"*'/'* '/tmp'
+        ln --symbolic "${PINO_HOME}/usr/local/share/pino/"*'/'* '/tmp'
     - name: Build with CMake
       run: |
         declare -ra targets=(
