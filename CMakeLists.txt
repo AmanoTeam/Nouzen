@@ -563,6 +563,10 @@ if (HAIKU)
 	)
 endif()
 
+if (ANDROID)
+	set(HAVE_FSEEKO 0)
+endif()
+
 add_subdirectory(
 	"${ZSTD_SOURCE_DIRECTORY}/build/cmake"
 	EXCLUDE_FROM_ALL

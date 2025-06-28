@@ -25,9 +25,16 @@ jobs:
     - uses: actions/checkout@main
       with:
         submodules: true
+    - name: Free up some space
+      run: |
+        curl 'https://raw.githubusercontent.com/AmanoTeam/gha-free-space/refs/heads/master/main.sh' -sSf | bash 
+    - name: Install required dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install build-essential || true
     - name: Setup OBGGCC cross-compiler 
       run: |
-        declare -r OBGGCC_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
+        declare -r OBGGCC_TAG=2.5 #"$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/obggcc/releases/latest')")"
         declare -r OBGGCC_TARBALL='/tmp/toolchain.tar.xz'
         declare -r OBGGCC_URL="https://github.com/AmanoTeam/obggcc/releases/download/${OBGGCC_TAG}/x86_64-unknown-linux-gnu.tar.xz"
         
@@ -47,6 +54,8 @@ jobs:
         
         echo 'PINO_HOME=/tmp/pino' >> "${GITHUB_ENV}"
         echo '/tmp/pino/bin' >> "${GITHUB_PATH}"
+        
+        sudo sed --in-place '/CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG/d' '/usr/local/share/cmake-'*'/Modules/Platform/Android.cmake'
     - name: Setup Linux musl cross-compiler
       run: |
         declare -r RAIDEN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
@@ -141,15 +150,15 @@ jobs:
     - name: Build with CMake
       run: |
         declare -ra targets=(
-        	# Android
+            # Android
             x86_64-unknown-linux-android
             i686-unknown-linux-android
             arm-unknown-linux-androideabi
             aarch64-unknown-linux-android
             
             # Linux (glibc)
-        	aarch64-unknown-linux-gnu2.19
-        	arm-unknown-linux-gnueabihf2.13
+            aarch64-unknown-linux-gnu2.19
+            arm-unknown-linux-gnueabihf2.13
             x86_64-unknown-linux-gnu2.7
             i386-unknown-linux-gnu2.7
             
@@ -165,32 +174,32 @@ jobs:
             aarch64-unknown-freebsd
             
             # OpenBSD
-            aarch64-unknown-openbsd
-            arm-unknown-openbsd
-            x86_64-unknown-openbsd
-            i386-unknown-openbsd
+            # aarch64-unknown-openbsd
+            # arm-unknown-openbsd
+            # x86_64-unknown-openbsd
+            # i386-unknown-openbsd
             
             # NetBSD
-            x86_64-unknown-netbsd
-            i386-unknown-netbsdelf
+            # x86_64-unknown-netbsd
+            # i386-unknown-netbsdelf
             
             # DragonFly BSD
-            x86_64-unknown-dragonfly
+            # x86_64-unknown-dragonfly
             
             # SerenityOS
-			riscv64-unknown-serenity
-			x86_64-unknown-serenity
-			aarch64-unknown-serenity
-			
-			# Haiku
-			x86_64-unknown-haiku
-            i586-unknown-haiku
+            # riscv64-unknown-serenity
+            # x86_64-unknown-serenity
+            # aarch64-unknown-serenity
+            
+            # Haiku
+            # x86_64-unknown-haiku
+            # i586-unknown-haiku
             
             # Windows
-            aarch64-w64-mingw32
-            armv7-w64-mingw32
-            i686-w64-mingw32
-            x86_64-w64-mingw32
+            # aarch64-w64-mingw32
+            # armv7-w64-mingw32
+            # i686-w64-mingw32
+            # x86_64-w64-mingw32
         )
         
         declare -r source_directory="${PWD}"
@@ -211,21 +220,17 @@ jobs:
                 declare install_prefix="${build_directory}/${target}"
                 
                 if [ "${target}" = 'aarch64-unknown-linux-gnu' ]; then
-                	extra_c_flags+='-DHWCAP_CRC32=128'
-                fi
-                
-                if [ "${target}" = 'sparc-unknown-linux-gnu' ]; then
-                	extra_c_flags+='-latomic'
+                    extra_c_flags+='-DHWCAP_CRC32=128'
                 fi
                 
                 cmake \
                     -B "${build_directory}" \
                     -S "${source_directory}" \
-                    -DNOUZEN_ENABLE_LTO='OFF' \
+                    -DNOUZEN_ENABLE_LTO='ON' \
                     -DCMAKE_C_FLAGS="${extra_c_flags}" \
                     -DCMAKE_TOOLCHAIN_FILE="${toolchain_file}" \
                     -DCMAKE_INSTALL_PREFIX="${install_prefix}" \
-                    -DCMAKE_BUILD_TYPE='MinSizeRel' 1>/dev/null
+                    -DCMAKE_BUILD_TYPE='Release' 1>/dev/null
                 
                 echo "- Building project"
                 
@@ -265,7 +270,7 @@ jobs:
         tag_name: v${{ env.VERSION_TAG }}
         name: Nouzen v${{ env.VERSION_TAG }}
         files: ./output/*
-        draft: true
+        draft: false
         prerelease: false
         fail_on_unmatched_files: true
       env:
