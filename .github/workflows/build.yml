@@ -240,6 +240,23 @@ jobs:
                 
                 cmake --install "${build_directory}" --strip
                 
+                # Bundle both libstdc++ and libgcc within host tools
+                (
+                    source "/tmp/${target}.sh"
+                    
+                    [ -d "${install_prefix}/lib" ] || mkdir "${install_prefix}/lib"
+                    
+                    declare name=$(realpath $("${CC}" --print-file-name='libstdc++.so'))
+                    declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+                    
+                    cp "${name}" "${install_prefix}/lib/${soname}"
+                    
+                    declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
+                    declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+                    
+                    cp "${name}" "${install_prefix}/lib/${soname}"
+                )
+                
                 echo "- Creating compressed archive"
                 
                 pushd "$(dirname "${install_prefix}")"

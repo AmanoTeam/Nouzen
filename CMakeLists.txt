@@ -617,13 +617,6 @@ if (NOT WIN32)
 	)
 endif()
 
-target_link_options(
-	patchelf
-	BEFORE
-	PRIVATE
-	-static-libstdc++ -static-libgcc
-)
-
 foreach(target ${CURL_LIBRARY_DEPENDENCIES})
 	add_custom_command(
 		OUTPUT ${target}
@@ -687,7 +680,7 @@ set_target_properties(
 )
 
 set_target_properties(
-	libcurl_shared archive
+	libcurl_shared archive patchelf
 	PROPERTIES
 	BUILD_RPATH "${LIB_RPATH}"
 	INSTALL_RPATH "${LIB_RPATH}"
