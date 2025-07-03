@@ -2,6 +2,7 @@
 
 struct Options {
 	char* prefix;
+	char* symlink_prefix;
 	int force_refresh;
 	int cache;
 	int assume_yes;

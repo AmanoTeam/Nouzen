@@ -22,9 +22,11 @@ static const char KOPT_PREFIX[] = "prefix";
 static const char KOPT_LOGLEVEL[] = "loglevel";
 static const char KOPT_SKIP_MAINTAINER_SCRIPTS[] = "skip-maintainer-scripts";
 static const char KOPT_ENABLE_PATCHELF[] = "enable-patchelf";
+static const char KOPT_SYMLINK_PREFIX[] = "symlink-prefix";
 
 static const char VPREFIX[] = "$ORIGIN" PATHSEP_M "sysroot";
 static const char VLOGLEVEL[] = "standard";
+static const char VSYMLINK_PREFIX[] = "none";
 static const biguint_t VCACHE = 1;
 static const biguint_t VFORCE_REFRESH = 0;
 static const biguint_t VPARALLELISM = 0;
@@ -85,7 +87,7 @@ int options_load(
 	
 	query_init(&query, '\n', "=");
 	
-	if (file_exists(filename)) {
+	if (file_exists(filename) == 1) {
 		err = query_load_file(&query, filename);
 	} else {
 		query_init(&query, '\n', " = ");
@@ -133,6 +135,13 @@ int options_load(
 		}
 		
 		err = query_add_string(&query, KOPT_LOGLEVEL, VLOGLEVEL);
+		
+		if (err != 0) {
+			err = APTERR_PKG_METADATA_WRITE_FAILURE;
+			goto end;
+		}
+		
+		err = query_add_string(&query, KOPT_SYMLINK_PREFIX, VSYMLINK_PREFIX);
 		
 		if (err != 0) {
 			err = APTERR_PKG_METADATA_WRITE_FAILURE;
@@ -295,6 +304,24 @@ int options_load(
 	
 	loglevel_set(loglevel);
 	
+	prefix = NULL;
+	
+	/* Symlink prefix */
+	value = query_get_string(&query, KOPT_SYMLINK_PREFIX);
+	
+	if (!(value == NULL || strcmp(value, VSYMLINK_PREFIX) == 0)) {
+		prefix = malloc(strlen(value) + 1);
+		
+		if (prefix == NULL) {
+			err = APTERR_MEM_ALLOC_FAILURE;
+			goto end;
+		}
+		
+		strcpy(prefix, value);
+	}
+	
+	options.symlink_prefix = prefix;
+	
 	end:;
 	
 	free(key);
@@ -315,6 +342,9 @@ void options_free(void) {
 	
 	free(options.prefix);
 	options.prefix = NULL;
+	
+	free(options.symlink_prefix);
+	options.symlink_prefix = NULL;
 	
 	options.force_refresh = 0;
 	options.cache = 0;

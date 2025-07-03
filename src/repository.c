@@ -417,7 +417,7 @@ char* repo_fetch_cache(repo_t* const repo) {
 		goto end;
 	}
 	
-	exists = file_exists(cache);
+	exists = file_exists(cache) == 1;
 	
 	end:;
 	
@@ -2648,7 +2648,7 @@ char* find_file(const char* const directory, const char* const name) {
 		file_extension = PACKAGES_FILE_EXT[index];
 		strcpy(match, file_extension);
 		
-		if (!file_exists(filename)) {
+		if (file_exists(filename) != 1) {
 			continue;
 		}
 		
@@ -2659,7 +2659,7 @@ char* find_file(const char* const directory, const char* const name) {
 	
 	*(match) = '\0';
 	
-	if (file_exists(filename)) {
+	if (file_exists(filename) == 1) {
 		return filename;
 	}
 	
@@ -2739,9 +2739,9 @@ int repolist_remove_single_package(
 		
 		status = -1;
 		
-		if (file_exists(name)) {
+		if (file_exists(name) == 1) {
 			status = remove_file(name);
-		} else if (directory_exists(name)) {
+		} else if (directory_exists(name) == 1) {
 			status = remove_empty_directory(name);
 		}
 		
@@ -2810,6 +2810,9 @@ int repolist_install_single_package(
 	
 	char* buffer = NULL;
 	char* match = NULL;
+	
+	walkdir_t walkdir = {0};
+	const walkdir_item_t* item = NULL;
 	
 	fstream_t* stream = NULL;
 	patchelf_t* patchelf = NULL;
@@ -3108,7 +3111,7 @@ int repolist_install_single_package(
 		}
 		
 		/* Rewrite symbolic links that points to an absolute path */
-		if (symlink_exists(entry)) {
+		if (symlink_exists(entry) == 1) {
 			free(filename);
 			filename = get_symlink(entry);
 			
@@ -3280,7 +3283,7 @@ int repolist_install_single_package(
 		strcat(filename, PATHSEP_S);
 		strcat(filename, loader);
 		
-		if (!file_exists(filename)) {
+		if (file_exists(filename) != 1) {
 			strcpy(filename, options->prefix);
 			strcat(filename, PATHSEP_S);
 			strcat(filename, loader);
@@ -3289,6 +3292,42 @@ int repolist_install_single_package(
 		patchelf_set_interpreter(patchelf, filename);
 		patchelf_force_rpath(patchelf, 1);
 		patchelf_perform(patchelf);
+	}
+	
+	if (options->symlink_prefix != NULL && directory_exists(options->symlink_prefix) == 1) {
+		if (walkdir_init(&walkdir, options->symlink_prefix) == -1) {
+			err = APTERR_FS_WALKDIR_FAILURE;
+			goto end;
+		}
+		
+		while ((item = walkdir_next(&walkdir)) != NULL) {
+			if (strcmp(item->name, ".") == 0 || strcmp(item->name, "..") == 0) {
+				continue;
+			}
+			
+			if (symlink_exists(item->name) == 1) {
+				continue;
+			}
+			
+			free(filename);
+			filename = malloc(strlen(options->symlink_prefix) + strlen(PATHSEP_S) + strlen(item->name) + 1);
+			
+			if (filename == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(filename, options->symlink_prefix);
+			strcat(filename, PATHSEP_S);
+			strcat(filename, item->name);
+			
+			loggln(LOG_VERBOSE, "Symlinking '%s' to '%s'", filename, item->name);
+			
+			if (create_symlink(filename, item->name) != 0) {
+				err = APTERR_FS_SYMLINK_FAILURE;
+				goto end;
+			}
+		}
 	}
 	
 	query_init(query, '\n', ": ");
@@ -3355,6 +3394,8 @@ int repolist_install_single_package(
 	fstream_close(stream);
 	
 	patchelf_free(patchelf);
+	
+	walkdir_free(&walkdir);
 	
 	return err;
 	

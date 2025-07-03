@@ -259,7 +259,7 @@ char* get_temp_dir(void) {
 				continue;
 			}
 			
-			if (!directory_exists(directory)) {
+			if (directory_exists(directory) != 1) {
 				continue;
 			}
 			
@@ -292,7 +292,7 @@ char* get_temp_dir(void) {
 		for (index = 0; index < sizeof(TEMPORARY_DIRECTORIES) / sizeof(*TEMPORARY_DIRECTORIES); index++) {
 			directory = TEMPORARY_DIRECTORIES[index];
 			
-			if (!directory_exists(directory)) {
+			if (directory_exists(directory) != 1) {
 				continue;
 			}
 			
