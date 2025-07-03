@@ -429,15 +429,15 @@ pkg_t* pkgsiter_next(
 
 architecture_t get_architecture(const char* const name) {
 	
-	if (strcmp(name, "amd64") == 0) {
+	if (strcmp(name, "amd64") == 0 || strcmp(name, "x86_64") == 0) {
 		return ARCH_AMD64;
 	}
 	
-	if (strcmp(name, "i386") == 0) {
+	if (strcmp(name, "i386") == 0 || strcmp(name, "i686") == 0) {
 		return ARCH_i386;
 	}
 	
-	if (strcmp(name, "armel") == 0) {
+	if (strcmp(name, "armel") == 0 || strcmp(name, "arm") == 0) {
 		return ARCH_ARMEL;
 	}
 	
@@ -465,7 +465,7 @@ architecture_t get_architecture(const char* const name) {
 		return ARCH_MIPSEL;
 	}
 	
-	if (strcmp(name, "arm64") == 0) {
+	if (strcmp(name, "arm64") == 0 || strcmp(name, "aarch64") == 0) {
 		return ARCH_ARM64;
 	}
 	

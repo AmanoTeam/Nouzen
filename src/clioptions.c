@@ -13,7 +13,7 @@
 #include "guess_uri.h"
 #include "sutils.h"
 #include "fs/mkdir.h"
-#include "os/env.h"
+#include "os/envdir.h"
 #include "os/cpu.h"
 
 #define CLI_OPTION_CONCURRENCY_MIN 1
@@ -51,7 +51,7 @@ int clioptions_parse(
 	
 	ssize_t nproc = 0;
 	
-	temporary_directory = get_temporary_directory();
+	temporary_directory = get_temp_dir();
 	
 	if (temporary_directory == NULL) {
 		err = M3U8ERR_DOWNLOAD_NO_TMPDIR;

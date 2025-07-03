@@ -4,46 +4,46 @@
 
 #include <curl/curl.h>
 
-#include "query.h"
-#include "strsplit.h"
-#include "package.h"
-#include "fstream.h"
-#include "repository.h"
-#include "errors.h"
-#include "guess_uri.h"
-#include "wcurl.h"
-#include "write_callback.h"
-#include "fs/realpath.h"
-#include "fs/mkdir.h"
-#include "fs/exists.h"
-#include "fs/basename.h"
-#include "fs/permissions.h"
-#include "fs/absoluteness.h"
-#include "os/env.h"
-#include "os/shell.h"
-#include "nouzen.h"
-#include "logging.h"
+#include "ask.h"
 #include "buffer.h"
-#include "fs/sep.h"
-#include "walkdir.h"
-#include "uncompress.h"
-#include "guess_file_format.h"
-#include "pprint.h"
-#include "format.h"
-#include "fs/getexec.h"
-#include "fs/rm.h"
-#include "fs/ext.h"
-#include "fs/symlinks.h"
+#include "cir.h"
 #include "distros.h"
 #include "downloader.h"
-#include "options.h"
-#include "cir.h"
-#include "ask.h"
-#include "wpatchelf.h"
-#include "terminal.h"
-#include "progress_callback.h"
-#include "wildcard_match.h"
+#include "errors.h"
+#include "format.h"
+#include "fs/absoluteness.h"
+#include "fs/basename.h"
 #include "fs/cd.h"
+#include "fs/exists.h"
+#include "fs/ext.h"
+#include "fs/getexec.h"
+#include "fs/mkdir.h"
+#include "fs/permissions.h"
+#include "fs/realpath.h"
+#include "fs/rm.h"
+#include "fs/sep.h"
+#include "fs/symlinks.h"
+#include "fstream.h"
+#include "guess_file_format.h"
+#include "guess_uri.h"
+#include "logging.h"
+#include "nouzen.h"
+#include "options.h"
+#include "os/envdir.h"
+#include "os/shell.h"
+#include "package.h"
+#include "pprint.h"
+#include "progress_callback.h"
+#include "query.h"
+#include "repository.h"
+#include "strsplit.h"
+#include "terminal.h"
+#include "uncompress.h"
+#include "walkdir.h"
+#include "wcurl.h"
+#include "wildcard_match.h"
+#include "wpatchelf.h"
+#include "write_callback.h"
 
 static const char ETC_DIRECTORY[] = 
 	PATHSEP_M
@@ -2564,7 +2564,7 @@ int repolist_install_package(
 	}
 	
 	dlopts.concurrency = options->concurrency;
-	dlopts.temporary_directory = get_temporary_directory();
+	dlopts.temporary_directory = get_temp_dir();
 	dlopts.progress_callback = download_progress_callback;
 	dlopts.retry = 8;
 	
@@ -2825,7 +2825,7 @@ int repolist_install_single_package(
 	
 	options = get_options();
 	
-	directory = get_temporary_directory();
+	directory = get_temp_dir();
 	
 	if (directory == NULL) {
 		err = APTERR_NO_TMPDIR;

@@ -61,7 +61,7 @@
 #define APTERR_REPO_GET_CONFDIR_FAILURE -41 /* Could not get configuration directory */
 #define APTERR_REPO_GET_PKGSDIR_FAILURE -42 /* Could not get packages directory */
 #define APTERR_REPO_GET_SRCDIR_FAILURE -43 /* Could not get sources directory */
-#define APTERR_REPO_LOAD_NO_SOURCES_AVAILABLE -44 /* No sources have been configured in /etc/nouzen */
+#define APTERR_REPO_LOAD_NO_SOURCES_AVAILABLE -44 /* No repository sources have been configured yet */
 #define APTERR_REPO_LOAD_UNSUPPORTED_URI -45 /* Could not load repository index from this URI; either this protocol is not supported or it was not recognized */
 #define APTERR_REPO_PKG_INDEX_TOO_LARGE -46 /* This package index exceeds the maximum allowed size */
 #define APTERR_REPO_UNKNOWN_ARCHITECTURE -47 /* Unknown repository architecture */

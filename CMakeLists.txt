@@ -87,7 +87,8 @@ set(
 	"${CMAKE_SOURCE_DIR}/src/logging.c"
 	"${CMAKE_SOURCE_DIR}/src/options.c"
 	"${CMAKE_SOURCE_DIR}/src/os/cpu.c"
-	"${CMAKE_SOURCE_DIR}/src/os/env.c"
+	"${CMAKE_SOURCE_DIR}/src/os/envdir.c"
+	"${CMAKE_SOURCE_DIR}/src/os/find_exe.c"
 	"${CMAKE_SOURCE_DIR}/src/os/shell.c"
 	"${CMAKE_SOURCE_DIR}/src/package.c"
 	"${CMAKE_SOURCE_DIR}/src/pprint.c"
@@ -684,6 +685,13 @@ set_target_properties(
 	PROPERTIES
 	BUILD_RPATH "${LIB_RPATH}"
 	INSTALL_RPATH "${LIB_RPATH}"
+)
+
+set_target_properties(
+	patchelf
+	PROPERTIES
+	CXX_STANDARD 17
+	CXX_STANDARD_REQUIRED ON
 )
 
 # Enable Unicode on Windows builds
