@@ -14,18 +14,15 @@
 #if defined(_WIN32)
 	#if defined(_UNICODE)
 		static const wchar_t WENV_APPDATA[] = L"APPDATA";
-		static const wchar_t WENV_PATH[] = L"PATH";
 	#else
 		static const char ENV_USERPROFILE[] = "USERPROFILE";
 		static const char ENV_APPDATA[] = "APPDATA";
-		static const char ENV_PATH[] = "PATH";
 	#endif
 #endif
 
 #if !defined(_WIN32)
 	static const char ENV_XDG_CONFIG_HOME[] = "XDG_CONFIG_HOME";
 	static const char ENV_HOME[] = "HOME";
-	static const char ENV_PATH[] = "PATH";
 	
 	static const char* const ENV_TEMPORARY_DIRECTORY[] = {
 		"TMPDIR",
@@ -47,12 +44,6 @@
 char* get_config_dir(void) {
 	/*
 	Returns the config directory of the current user for applications.
-	
-	On non-Windows OSs, this proc conforms to the XDG Base Directory
-	spec. Thus, this proc returns the value of the "XDG_CONFIG_HOME" environment
-	variable if it is set, otherwise it returns the default configuration directory ("~/.config/").
-	
-	Returns a null pointer on error.
 	*/
 	
 	int err = 0;
@@ -158,12 +149,6 @@ char* get_temp_dir(void) {
 	/*
 	Returns the temporary directory of the current user for applications to
 	save temporary files in.
-	
-	On Windows, it calls GetTempPath().
-	On Posix based platforms, it will check "TMPDIR", "TEMP", "TMP" and
-	"TEMPDIR" environment variables in order.
-	
-	Returns NULL on error.
 	*/
 	
 	int err = 0;
@@ -327,11 +312,6 @@ char* get_temp_dir(void) {
 char* get_home_dir(void) {
 	/*
 	Returns the home directory of the current user.
-	
-	On Windows, it returns the value from "USERPROFILE" environment variable.
-	On Posix based platforms, it returns the value from "HOME" environment variable.
-	
-	Returns NULL on error.
 	*/
 	
 	int err = 0;
