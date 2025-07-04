@@ -610,6 +610,14 @@ target_compile_definitions(
 	ZDICT_QSORT=ZDICT_QSORT_MIN
 )
 
+if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+	target_compile_options(
+		liblzma
+		PRIVATE
+		-include sys/types.h
+	)
+endif()
+
 if (NOT WIN32)
 	target_compile_definitions(
 		nghttp2

@@ -150,6 +150,12 @@ jobs:
     - name: Build with CMake
       run: |
         declare -ra targets=(
+            # OpenBSD
+            aarch64-unknown-openbsd
+            arm-unknown-openbsd
+            x86_64-unknown-openbsd
+            i386-unknown-openbsd
+            
             # Android
             x86_64-unknown-linux-android
             i686-unknown-linux-android
@@ -173,23 +179,17 @@ jobs:
             i386-unknown-freebsd
             aarch64-unknown-freebsd
             
-            # OpenBSD
-            aarch64-unknown-openbsd
-            arm-unknown-openbsd
-            x86_64-unknown-openbsd
-            i386-unknown-openbsd
-            
             # NetBSD
             x86_64-unknown-netbsd
             i386-unknown-netbsdelf
             
             # DragonFly BSD
-            # x86_64-unknown-dragonfly
+            x86_64-unknown-dragonfly
             
             # SerenityOS
-            riscv64-unknown-serenity
-            x86_64-unknown-serenity
-            aarch64-unknown-serenity
+            # riscv64-unknown-serenity
+            # x86_64-unknown-serenity
+            # aarch64-unknown-serenity
             
             # Haiku
             x86_64-unknown-haiku
