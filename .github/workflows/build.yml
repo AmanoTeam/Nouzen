@@ -251,10 +251,12 @@ jobs:
                     
                     cp "${name}" "${install_prefix}/lib/${soname}"
                     
-                    declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
-                    declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
-                    
-                    cp "${name}" "${install_prefix}/lib/${soname}"
+                    if ! [[ "${target}" == *'-openbsd'* ]]; then
+                        declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
+                        declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+                        
+                        cp "${name}" "${install_prefix}/lib/${soname}"
+                    fi
                 )
                 
                 echo "- Creating compressed archive"
