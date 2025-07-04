@@ -477,6 +477,10 @@ set(ENABLE_DOC OFF)
 # xz-utils
 set(XZ_NLS OFF)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+	set(XZ_ASM_I386 OFF)
+endif()
+
 # zstd
 set(BUILD_SHARED_LIBS ON)
 set(ZSTD_BUILD_PROGRAMS OFF)
