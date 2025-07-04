@@ -192,8 +192,8 @@ jobs:
             # aarch64-unknown-serenity
             
             # Haiku
-            x86_64-unknown-haiku
-            i586-unknown-haiku
+            # x86_64-unknown-haiku
+            # i586-unknown-haiku
             
             # Windows
             # aarch64-w64-mingw32
@@ -251,7 +251,7 @@ jobs:
                     
                     cp "${name}" "${install_prefix}/lib/${soname}"
                     
-                    if ! [[ "${target}" == *'-openbsd'* ]]; then
+                    if [[ "${target}" != *'-openbsd'* ]]; then
                         declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
                         declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
                         
