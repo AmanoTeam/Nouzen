@@ -161,6 +161,7 @@ jobs:
             i686-unknown-linux-android
             arm-unknown-linux-androideabi
             aarch64-unknown-linux-android
+            riscv64-unknown-linux-android
             
             # Linux (glibc)
             aarch64-unknown-linux-gnu2.19
@@ -246,13 +247,28 @@ jobs:
                     
                     [ -d "${install_prefix}/lib" ] || mkdir "${install_prefix}/lib"
                     
+                    # libstdc++
                     declare name=$(realpath $("${CC}" --print-file-name='libstdc++.so'))
+                    
+                    # libestdc++
+                    if ! [ -f "${name}" ]; then
+                        declare name=$(realpath $("${CC}" --print-file-name='libestdc++.so'))
+                    fi
+                    
                     declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
                     
                     cp "${name}" "${install_prefix}/lib/${soname}"
                     
+                    # OpenBSD does not have a libgcc library
                     if [[ "${target}" != *'-openbsd'* ]]; then
+                        # libgcc_s
                         declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
+                        
+                        # libegcc
+                        if ! [ -f "${name}" ]; then
+                            declare name=$(realpath $("${CC}" --print-file-name='libegcc.so'))
+                        fi
+                        
                         declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
                         
                         cp "${name}" "${install_prefix}/lib/${soname}"

@@ -763,6 +763,11 @@ install(
 )
 
 install(
+	FILES "${CMAKE_SOURCE_DIR}/options.conf"
+	DESTINATION etc/nouzen
+)
+
+install(
 	PROGRAMS "${CMAKE_SOURCE_DIR}/tools/apt.sh"
 	TYPE BIN
 	RENAME apt
