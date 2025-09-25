@@ -286,7 +286,7 @@ int main(int argc, argv_t* argv[]) {
 		switch (action) {
 			case ACTION_INSTALL:
 			case ACTION_UNINSTALL: {
-				strsplit_init(&split, arg->value, ";");
+				strsplit_init(&split, &part, arg->value, ";");
 				
 				while (strsplit_next(&split, &part) != NULL) {
 					if ((index + 2) > PKGS_QUEUE_MAX) {

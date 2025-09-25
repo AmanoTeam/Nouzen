@@ -43,7 +43,7 @@ jobs:
         
         echo 'OBGGCC_HOME=/tmp/obggcc' >> "${GITHUB_ENV}"
         echo '/tmp/obggcc/bin' >> "${GITHUB_PATH}"
-    - name: Setup Pino cross-compiler 
+    - name: Setup Android cross-compiler 
       run: |
         declare -r PINO_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Pino/releases/latest')")"
         declare -r PINO_TARBALL='/tmp/toolchain.tar.xz'
@@ -56,6 +56,12 @@ jobs:
         echo '/tmp/pino/bin' >> "${GITHUB_PATH}"
         
         sudo sed --in-place '/CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG/d' '/usr/local/share/cmake-'*'/Modules/Platform/Android.cmake'
+        
+        rm \
+            "/tmp/pino/include/bionic/"{zconf,zlib}'.h' \
+            "/tmp/pino/"*'-unknown-linux-'{androideabi,android}'/include/'{zconf,zlib}'.h' \
+            "/tmp/pino/"*'-unknown-linux-android'*'/lib/libz.so' \
+            "/tmp/pino/"*'-unknown-linux-android'*'/lib/static/libz.so'
     - name: Setup Linux musl cross-compiler
       run: |
         declare -r RAIDEN_TAG="$(jq --raw-output '.tag_name' <<< "$(curl --connect-timeout '10' --retry '15' --retry-all-errors --fail --silent --url 'https://api.github.com/repos/AmanoTeam/Raiden/releases/latest')")"
@@ -144,48 +150,71 @@ jobs:
         
         echo 'LLVM_MINGW_HOME=/tmp/llvm-mingw' >> "${GITHUB_ENV}"
         echo '/tmp/llvm-mingw/bin' >> "${GITHUB_PATH}"
+    - name: Setup macOS cross-compiler
+      run: |
+        curl \
+            --silent \
+            --show-error \
+            --fail \
+            --url 'https://raw.githubusercontent.com/AmanoTeam/OSXCross-Builds/refs/heads/master/main.sh' \
+                | bash -s -- install
+        
+        export DARWIN_HOME='/tmp/darwin'
+        export PATH="${DARWIN_HOME}/bin:${PATH}"
+        
+        echo 'DARWIN_HOME=/tmp/darwin' >> "${GITHUB_ENV}"
+        echo '/tmp/darwin/bin' >> "${GITHUB_PATH}"
     - name: Setup symbolic links
       run: |
-        ln --symbolic '/tmp/'*'/usr/local/share/'*'/'*'/'* '/tmp'
+        ln --force --symbolic '/tmp/'*'/usr/local/share/'*'/'*'/'* '/tmp'
     - name: Build with CMake
       run: |
         declare -ra targets=(
+            # macOS
+            'aarch64-unknown-apple-darwin'
+            'x86_64-unknown-apple-darwin'
+            
             # OpenBSD
-            aarch64-unknown-openbsd
-            arm-unknown-openbsd
-            x86_64-unknown-openbsd
-            i386-unknown-openbsd
+            'aarch64-unknown-openbsd'
+            'arm-unknown-openbsd'
+            'x86_64-unknown-openbsd'
+            'i386-unknown-openbsd'
             
             # Android
-            x86_64-unknown-linux-android
-            i686-unknown-linux-android
-            arm-unknown-linux-androideabi
-            aarch64-unknown-linux-android
-            # riscv64-unknown-linux-android
+            'x86_64-unknown-linux-android'
+            'i686-unknown-linux-android21'
+            'aarch64-unknown-linux-android'
+            'riscv64-unknown-linux-android'
+            'armv5-unknown-linux-androideabi21'
+            'armv7-unknown-linux-androideabi21'
+            'mips64el-unknown-linux-android'
+            'mipsel-unknown-linux-android21'
             
             # Linux (glibc)
-            aarch64-unknown-linux-gnu2.19
-            arm-unknown-linux-gnueabihf2.13
-            x86_64-unknown-linux-gnu2.7
-            i386-unknown-linux-gnu2.7
+            'aarch64-unknown-linux-gnu2.19'
+            'arm-unknown-linux-gnueabi2.13'
+            'arm-unknown-linux-gnueabihf2.13'
+            'x86_64-unknown-linux-gnu2.7'
+            'i386-unknown-linux-gnu2.7'
             
             # Linux (musl)
-            aarch64-unknown-linux-musl
-            armv7l-unknown-linux-musleabihf
-            i386-unknown-linux-musl
-            x86_64-unknown-linux-musl
+            'aarch64-unknown-linux-musl'
+            'arm-unknown-linux-musleabihf',
+            'armv7l-unknown-linux-musleabihf'
+            'i386-unknown-linux-musl'
+            'x86_64-unknown-linux-musl'
             
             # FreeBSD
-            x86_64-unknown-freebsd
-            i386-unknown-freebsd
-            aarch64-unknown-freebsd
+            'x86_64-unknown-freebsd'
+            'i386-unknown-freebsd'
+            'aarch64-unknown-freebsd'
             
             # NetBSD
-            x86_64-unknown-netbsd
-            i386-unknown-netbsdelf
+            'x86_64-unknown-netbsd'
+            'i386-unknown-netbsdelf'
             
             # DragonFly BSD
-            x86_64-unknown-dragonfly
+            'x86_64-unknown-dragonfly'
             
             # SerenityOS
             # riscv64-unknown-serenity
@@ -216,6 +245,7 @@ jobs:
                 echo "toolchain -> ${toolchain_file}"
                 
                 target="${target%2.*}"
+                target="${target/21/}"
                 
                 declare build_directory="${PWD}/${target}-build"
                 declare install_prefix="${build_directory}/${target}"
@@ -241,39 +271,41 @@ jobs:
                 
                 cmake --install "${build_directory}" --strip
                 
-                # Bundle both libstdc++ and libgcc within host tools
-                (
-                    source "/tmp/${target}.sh"
-                    
-                    [ -d "${install_prefix}/lib" ] || mkdir "${install_prefix}/lib"
-                    
-                    # libstdc++
-                    declare name=$(realpath $("${CC}" --print-file-name='libstdc++.so'))
-                    
-                    # libestdc++
-                    if ! [ -f "${name}" ]; then
-                        declare name=$(realpath $("${CC}" --print-file-name='libestdc++.so'))
-                    fi
-                    
-                    declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
-                    
-                    cp "${name}" "${install_prefix}/lib/${soname}"
-                    
-                    # OpenBSD does not have a libgcc library
-                    if [[ "${target}" != *'-openbsd'* ]]; then
-                        # libgcc_s
-                        declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
+                if [[ "${target}" != *'-darwin'* ]]; then
+                    # Bundle both libstdc++ and libgcc within host tools
+                    (
+                        source "/tmp/${target}.sh"
                         
-                        # libegcc
+                        [ -d "${install_prefix}/lib" ] || mkdir "${install_prefix}/lib"
+                        
+                        # libstdc++
+                        declare name=$(realpath $("${CC}" --print-file-name='libstdc++.so'))
+                        
+                        # libestdc++
                         if ! [ -f "${name}" ]; then
-                            declare name=$(realpath $("${CC}" --print-file-name='libegcc.so'))
+                            declare name=$(realpath $("${CC}" --print-file-name='libestdc++.so'))
                         fi
                         
                         declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
                         
                         cp "${name}" "${install_prefix}/lib/${soname}"
-                    fi
-                )
+                        
+                        # OpenBSD does not have a libgcc library
+                        if [[ "${target}" != *'-openbsd'* ]]; then
+                            # libgcc_s
+                            declare name=$(realpath $("${CC}" --print-file-name='libgcc_s.so.1'))
+                            
+                            # libegcc
+                            if ! [ -f "${name}" ]; then
+                                declare name=$(realpath $("${CC}" --print-file-name='libegcc.so'))
+                            fi
+                            
+                            declare soname=$("${READELF}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+                            
+                            cp "${name}" "${install_prefix}/lib/${soname}"
+                        fi
+                    )
+                fi
                 
                 echo "- Creating compressed archive"
                 

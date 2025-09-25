@@ -32,10 +32,10 @@ static const char* const BOOL_VAL_FALSE[] = {
 	"no",
 	"0"
 };
-	
-	
 
-enum HTTPQueryNumeric {
+extern char** environ;
+
+enum hquery_num {
 	HQUERY_INT,
 	HQUERY_UINT,
 	HQUERY_FLOAT
@@ -104,7 +104,7 @@ char* query_get_string(
 }
 
 static int get_numeric_value(
-	const enum HTTPQueryNumeric type,
+	const enum hquery_num type,
 	const char* const source,
 	bigint_storage_t* destination
 ) {
@@ -158,7 +158,7 @@ static int get_numeric_value(
 
 static int query_get_numeric(
 	hquery_t* const query,
-	const enum HTTPQueryNumeric type,
+	const enum hquery_num type,
 	const char* const key,
 	bigint_storage_t* destination
 ) {
@@ -386,7 +386,7 @@ int query_add_string(
 
 static int query_add_numeric(
 	hquery_t* const query,
-	const enum HTTPQueryNumeric type,
+	const enum hquery_num type,
 	const char* const key,
 	const void* const value
 ) {
@@ -563,14 +563,14 @@ int query_load_string(
 	
 	hquery_param_t param = {0};
 	
-	strsplit_init(&split, string, separator);
+	strsplit_init(&split, &part, string, separator);
 	
 	while (strsplit_next(&split, &part) != NULL) {
 		if (part.size == 0) {
 			continue;
 		}
 		
-		strsplit_init(&subsplit, part.begin, query->subsep);
+		strsplit_init(&subsplit, &subpart, part.begin, query->subsep);
 		
 		/* Parse parameter name */
 		strsplit_next(&subsplit, &subpart);
@@ -648,6 +648,60 @@ int query_load_string(
 		param_free(&param);
 		query_free(query);
 	}
+	
+	return err;
+	
+}
+
+int query_load_environ(hquery_t* const query) {
+	
+	int err = 0;
+	
+	char* string = NULL;
+	const char* item = NULL;
+	
+	size_t index = 0;
+	size_t size = 0;
+	
+	char separator[] = {'\0', '\0'};
+	
+	if (environ == NULL) {
+		err = -1;
+		goto end;
+	}
+	
+	query_init(query, 0, NULL);
+	
+	separator[0] = query->sep;
+	
+	while ((item = environ[index++]) != NULL) {
+		size += strlen(item) + strlen(separator);
+	}
+	
+	string = malloc(size + 1);
+	
+	if (string == NULL) {
+		err = -1;
+		goto end;
+	}
+	
+	string[0] = '\0';
+	
+	index = 0;
+	
+	while ((item = environ[index++]) != NULL) {
+		if (string[0] != '\0') {
+			strcat(string, separator);
+		}
+		
+		strcat(string, item);
+	}
+	
+	err = query_load_string(query, string);
+	
+	end:;
+	
+	free(string);
 	
 	return err;
 	

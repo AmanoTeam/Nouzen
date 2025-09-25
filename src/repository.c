@@ -611,7 +611,7 @@ int repo_load_string(
 	
 	section[0] = '\0';
 	
-	strsplit_init(&split, source, "\n");
+	strsplit_init(&split, &part, source, "\n");
 	
 	while (1) {
 		if (strsplit_next(&split, &part) == NULL) {
@@ -1168,7 +1168,7 @@ int repolist_load(repolist_t* const list) {
 		
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
 		
-		strsplit_init(&split, resources, " ");
+		strsplit_init(&split, &part, resources, " ");
 		
 		while (strsplit_next(&split, &part) != NULL) {
 			if (part.size == 0) {
@@ -1413,7 +1413,7 @@ pkg_t* pkgs_get_virt_pkg(
 			continue;
 		}
 		
-		strsplit_init(&split, pkg->provides, ",");
+		strsplit_init(&split, &part, pkg->provides, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
 			if (strncmp(name, part.begin, size) != 0) {
@@ -1575,7 +1575,7 @@ int repolist_resolve_related(
 			break;
 	}
 	
-	strsplit_init(&split, value, ",");
+	strsplit_init(&split, &part, value, ",");
 	
 	while (1) {
 		if (pkglist_split_next(&split, &part) == NULL) {
@@ -1689,7 +1689,7 @@ int repolist_fix_loops(
 		return 0;
 	}
 
-	strsplit_init(&split, pkg->depends, ",");
+	strsplit_init(&split, &part, pkg->depends, ",");
 	
 	while (1) {
 		if (pkglist_split_next(&split, &part) == NULL) {
@@ -1739,7 +1739,7 @@ int repolist_fix_loops(
 			continue;
 		}
 		
-		strsplit_init(&subsplit, dependency->depends, ",");
+		strsplit_init(&subsplit, &subpart, dependency->depends, ",");
 		
 		while (1) {
 			if (pkglist_split_next(&subsplit, &subpart) == NULL) {
@@ -2089,7 +2089,7 @@ int repolist_get_dependants(
 					}
 				}
 			} else {
-				strsplit_init(&split, pkg->depends, ",");
+				strsplit_init(&split, &part, pkg->depends, ",");
 				
 				while (pkglist_split_next(&split, &part) != NULL) {
 					matches = strncmp(dependency->name, part.begin, size) == 0;
@@ -2711,7 +2711,7 @@ int repolist_remove_single_package(
 		goto end;
 	}
 	
-	strsplit_init(&split, entries, ",");
+	strsplit_init(&split, &part, entries, ",");
 	
 	while (1) {
 		if (strsplit_next(&split, &part) == NULL) {
@@ -2721,7 +2721,7 @@ int repolist_remove_single_package(
 			
 			removed = 0;
 			
-			strsplit_init(&split, entries, ",");
+			strsplit_init(&split, &part, entries, ",");
 			
 			continue;
 		}

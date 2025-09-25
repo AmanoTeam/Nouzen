@@ -39,7 +39,7 @@ ssize_t get_nproc(void) {
 			const int code = HW_NCPU;
 		#endif
 		
-		const int call[] = {CTL_HW, code};
+		int call[] = {CTL_HW, code};
 		
 		size_t size = sizeof(processors);
 		

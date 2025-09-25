@@ -3,14 +3,14 @@
 
 #include "biggestint.h"
 
-struct HTTPQueryParam {
+struct hquery_param {
 	char* key;
 	char* value;
 };
 
-typedef struct HTTPQueryParam hquery_param_t;
+typedef struct hquery_param hquery_param_t;
 
-struct HTTPQuery {
+struct hquery {
 	size_t size;
 	size_t offset;
 	hquery_param_t* parameters;
@@ -18,7 +18,7 @@ struct HTTPQuery {
 	const char* subsep;
 };
 
-typedef struct HTTPQuery hquery_t;
+typedef struct hquery hquery_t;
 
 void query_free(hquery_t* const query);
 
@@ -96,6 +96,8 @@ int query_load_file(
 	hquery_t* const query,
 	const char* const filename
 );
+
+int query_load_environ(hquery_t* const query);
 
 void param_free(hquery_param_t* const param);
 

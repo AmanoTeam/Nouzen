@@ -6,7 +6,7 @@
 	url = https://github.com/curl/curl
 [submodule "submodules/bearssl"]
 	path = submodules/bearssl
-	url = https://www.bearssl.org/git/BearSSL
+	url = https://github.com/AmanoTeam/BearSSL
 [submodule "submodules/nghttp2"]
 	path = submodules/nghttp2
 	url = https://github.com/nghttp2/nghttp2
