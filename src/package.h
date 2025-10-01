@@ -49,6 +49,7 @@ struct Package {
 	void* recommends;
 	void* suggests;
 	void* breaks;
+	void* replaces;
 	installation_t installation;
 	biguint_t size;
 	biguint_t installed_size;

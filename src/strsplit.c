@@ -15,6 +15,10 @@ void strsplit_init(
 	const char* const sep
 ) {
 	
+	if (string == NULL) {
+		return;
+	}
+	
 	strsplit->sstart = string;
 	strsplit->send = strchr(strsplit->sstart, '\0');
 	
@@ -42,6 +46,10 @@ const strsplit_part_t* strsplit_next(
 	int seek = 0;
 	
 	size_t part_size = 0;
+	
+	if (strsplit->sstart == NULL) {
+		return NULL;
+	}
 	
 	if (strsplit->eof) {
 		return NULL;

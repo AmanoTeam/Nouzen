@@ -1409,11 +1409,17 @@ pkg_t* pkgs_get_virt_pkg(
 	for (index = 0; index < pkgs->offset; index++) {
 		pkg = pkgs->items[index];
 		
-		if (pkg->provides == NULL) {
-			continue;
+		strsplit_init(&split, &part, pkg->provides, ",");
+		
+		while (pkglist_split_next(&split, &part) != NULL) {
+			if (strncmp(name, part.begin, size) != 0) {
+				continue;
+			}
+			
+			return pkg;
 		}
 		
-		strsplit_init(&split, &part, pkg->provides, ",");
+		strsplit_init(&split, &part, pkg->replaces, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
 			if (strncmp(name, part.begin, size) != 0) {

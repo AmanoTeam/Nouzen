@@ -140,6 +140,20 @@ int pkg_parse(
 		strcpy(pkg->breaks, value);
 	}
 	
+	/* Replaces */
+	value = query_get_string(query, "Replaces");
+	
+	if (value != NULL) {
+		pkg->replaces = malloc(strlen(value) + 1);
+		
+		if (pkg->replaces == NULL) {
+			err = APTERR_MEM_ALLOC_FAILURE;
+			goto end;
+		}
+		
+		strcpy(pkg->replaces, value);
+	}
+	
 	/* Size */
 	pkg->size = query_get_uint(query, "Size");
 	
@@ -180,12 +194,14 @@ void pkg_free(pkg_t* const pkg) {
 	free(pkg->breaks);
 	free(pkg->recommends);
 	free(pkg->suggests);
+	free(pkg->replaces);
 	
 	pkg->depends = NULL;
 	pkg->breaks = NULL;
 	pkg->recommends = NULL;
 	pkg->suggests = NULL;
-		
+	pkg->replaces = NULL;
+	
 	free(pkg->installation.filename);
 	pkg->installation.filename = NULL;
 	
