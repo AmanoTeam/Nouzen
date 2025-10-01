@@ -3,7 +3,7 @@
 
 #define PROJECT_NAME "Nouzen"
 #define PROJECT_NAME_LOWERCASE "nouzen"
-#define PROJECT_VERSION "0.1-alpha7"
+#define PROJECT_VERSION "0.1-alpha8"
 #define PROJECT_REPOSITORY "https://github.com/AmanoTeam/Nouzen"
 
 #endif
