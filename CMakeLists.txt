@@ -423,8 +423,6 @@ set(
 	CURL_LIBRARY_DEPENDENCIES
 	bearssl
 	nghttp2
-	zlib
-	libzstd_shared
 )
 
 set(
