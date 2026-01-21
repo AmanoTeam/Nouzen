@@ -4,8 +4,8 @@
 #include <curl/curl.h>
 
 #include "downloader.h"
-#include "terminal.h"
-#include "fstream.h"
+#include "term/screen.h"
+#include "fs/fstream.h"
 #include "wcurl.h"
 #include "errors.h"
 #include "fs/sep.h"

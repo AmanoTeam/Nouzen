@@ -12,23 +12,13 @@
 	#include <unistd.h>
 #endif
 
-#include "cir.h"
-
-#if !defined(_WIN32)
-	static const int EXTRA_TCSETATTR_ACTIONS = (
-		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-			TCSASOFT
-		#else
-			0
-		#endif
-	);
-#endif
+#include "term/keyboard.h"
 
 int cir_init(cir_t* const reader) {
 	/*
 	Initializes the Console Input Reader struct.
 	
-	On Linux, this will set the standard input to raw mode.
+	On Unix, this will set the standard input to raw mode.
 	Under Windows, this will remove the ENABLE_PROCESSED_INPUT bit from the standard input flags.
 	
 	Returns (0) on success, (-1) on error.
@@ -57,6 +47,7 @@ int cir_init(cir_t* const reader) {
 	#else
 		struct termios attributes = {0};
 		
+		int flags = TCSAFLUSH;
 		const int fd = fileno(stdin);
 		
 		if (fd == -1) {
@@ -74,14 +65,18 @@ int cir_init(cir_t* const reader) {
 		attributes.c_cc[VTIME] = 0;
 		attributes.c_cc[VMIN] = 1;
 		
-		if (tcsetattr(fd, TCSAFLUSH | EXTRA_TCSETATTR_ACTIONS, &attributes) == -1) {
+		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+			flags |= TCSASOFT;
+		#endif
+		
+		if (tcsetattr(fd, flags, &attributes) == -1) {
 			return -1;
 		}
 		
 		fflush(stdin);
 	#endif
 	
-	reader->initialized = 1;
+	reader->status = 1;
 	
 	return 0;
 	
@@ -97,13 +92,13 @@ const cir_key_t* cir_get(cir_t* const reader) {
 	#if defined(_WIN32)
 		HANDLE handle = 0;
 		
-		INPUT_RECORD input_records[128];
+		INPUT_RECORD inputs[128];
 		DWORD records_count = 0;
 		
 		BOOL status = FALSE;
 		
-		const INPUT_RECORD* input_record = NULL;
-		const KEY_EVENT_RECORD* key_event = NULL;
+		const INPUT_RECORD* input = NULL;
+		const KEY_EVENT_RECORD* event = NULL;
 		
 		size_t left = 0;
 	#endif
@@ -118,7 +113,7 @@ const cir_key_t* cir_get(cir_t* const reader) {
 	
 	const cir_key_t* key = NULL;
 	
-	memset(reader->tmp, '\0', sizeof(reader->tmp));
+	memset(reader->buffer, '\0', sizeof(reader->buffer));
 	
 	#if defined(_WIN32)
 		handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -128,9 +123,9 @@ const cir_key_t* cir_get(cir_t* const reader) {
 		}
 		
 		#if defined(_UNICODE)
-			status = ReadConsoleInputW(handle, input_records, sizeof(input_records) / sizeof(*input_records), &records_count);
+			status = ReadConsoleInputW(handle, inputs, sizeof(inputs) / sizeof(*inputs), &records_count);
 		#else
-			status = ReadConsoleInputA(handle, input_records, sizeof(input_records) / sizeof(*input_records), &records_count);
+			status = ReadConsoleInputA(handle, inputs, sizeof(inputs) / sizeof(*inputs), &records_count);
 		#endif
 		
 		if (!status) {
@@ -138,40 +133,40 @@ const cir_key_t* cir_get(cir_t* const reader) {
 		}
 		
 		for (index = 0; index < (size_t) records_count; index++) {
-			input_record = &input_records[index];
-			key_event = (KEY_EVENT_RECORD*) &input_record->Event;
+			input = &inputs[index];
+			event = (KEY_EVENT_RECORD*) &input->Event;
 			
-			left = sizeof(reader->tmp) - index;
+			left = sizeof(reader->buffer) - index;
 			
 			if (left < 2) {
 				return NULL;
 			}
 			
-			if (!(input_record->EventType == KEY_EVENT && key_event->bKeyDown)) {
+			if (!(input->EventType == KEY_EVENT && event->bKeyDown)) {
 				break;
 			}
 			
 			#if defined(_UNICODE)
-				if (key_event->uChar.UnicodeChar == L'\0') {
-					reader->tmp[index] = (char) key_event->wVirtualKeyCode;
+				if (event->uChar.UnicodeChar == L'\0') {
+					reader->buffer[index] = (char) event->wVirtualKeyCode;
 				} else {
-					ws[0] = key_event->uChar.UnicodeChar;
+					ws[0] = event->uChar.UnicodeChar;
 					ws[1] = L'\0';
 					
-					if (WideCharToMultiByte(CP_UTF8, 0, ws, -1, reader->tmp + index, left, NULL, NULL) == 0) {
+					if (WideCharToMultiByte(CP_UTF8, 0, ws, -1, reader->buffer + index, left, NULL, NULL) == 0) {
 						return NULL;
 					}
 				}
 			#else
-				reader->tmp[index] = (
-					(key_event->uChar.AsciiChar == '\0') ?
-					(char) key_event->wVirtualKeyCode :
-					key_event->uChar.AsciiChar
+				reader->buffer[index] = (
+					(event->uChar.AsciiChar == '\0') ?
+					(char) event->wVirtualKeyCode :
+					event->uChar.AsciiChar
 				);
 			#endif
 		}
 		
-		if (reader->tmp[0] == '\0') {
+		if (reader->buffer[0] == '\0') {
 			return &KEYBOARD_KEY_EMPTY;
 		}
 	#else
@@ -181,7 +176,7 @@ const cir_key_t* cir_get(cir_t* const reader) {
 			return NULL;
 		}
 		
-		if (read(fd, reader->tmp, sizeof(reader->tmp)) == -1) {
+		if (read(fd, reader->buffer, sizeof(reader->buffer)) == -1) {
 			return NULL;
 		}
 	#endif
@@ -190,11 +185,11 @@ const cir_key_t* cir_get(cir_t* const reader) {
 		key = &keys[index];
 		
 		#if defined(_WIN32)
-			if (*key->code == (DWORD) *reader->tmp) {
+			if (*key->code == (DWORD) *reader->buffer) {
 				return key;
 			}
 		#else
-			if (memcmp(key->code, reader->tmp, strlen(reader->tmp)) == 0) {
+			if (memcmp(key->code, reader->buffer, strlen(reader->buffer)) == 0) {
 				return key;
 			}
 		#endif
@@ -208,7 +203,7 @@ int cir_free(cir_t* const reader) {
 	/*
 	Free the Console Input Reader struct.
 	
-	On Linux, this will reset the standard input attributes back to "sane mode".
+	On Unix, this will reset the standard input attributes back to "sane mode".
 	Under Windows, this will add back the ENABLE_PROCESSED_INPUT bit to the standard input flags.
 	
 	Returns (0) on success, (-1) on error.
@@ -221,7 +216,7 @@ int cir_free(cir_t* const reader) {
 			return -1;
 		}
 		
-		if (!reader->initialized) {
+		if (!reader->status) {
 			return 0;
 		}
 		
@@ -229,22 +224,27 @@ int cir_free(cir_t* const reader) {
 			return -1;
 		}
 	#else
+		int flags = TCSAFLUSH;
 		const int fd = fileno(stdin);
 		
 		if (fd == -1) {
 			return -1;
 		}
 		
-		if (!reader->initialized) {
+		if (!reader->status) {
 			return 0;
 		}
 		
-		if (tcsetattr(fd, TCSAFLUSH | EXTRA_TCSETATTR_ACTIONS, &reader->attributes) == -1) {
+		#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+			flags |= TCSASOFT;
+		#endif
+		
+		if (tcsetattr(fd, flags, &reader->attributes) == -1) {
 			return -1;
 		}
 	#endif
 	
-	memset(reader->tmp, '\0', sizeof(reader->tmp));
+	memset(reader->buffer, '\0', sizeof(reader->buffer));
 	
 	return 0;
 	

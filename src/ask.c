@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "cir.h"
+#include "term/keyboard.h"
 #include "ask.h"
 
 int ask(void) {

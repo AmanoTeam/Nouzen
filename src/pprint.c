@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "package.h"
-#include "terminal.h"
+#include "term/screen.h"
 #include "pprint.h"
 
 void pprint_packages(const pkgs_t* const indirect) {

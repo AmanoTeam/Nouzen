@@ -55,6 +55,11 @@ const strsplit_part_t* strsplit_next(
 		return NULL;
 	}
 	
+	if (*strsplit->sep == '\0') {
+		strsplit->eof = 1;
+		return NULL;
+	}
+	
 	if (strsplit->pend == NULL) {
 		strsplit->pend = strsplit->send;
 	}

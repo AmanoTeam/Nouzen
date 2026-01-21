@@ -1,5 +1,5 @@
-#if !defined(CIR_H)
-#define CIR_H
+#if !defined(TERM_KEYBOARD_H)
+#define TERM_KEYBOARD_H
 
 #include <stdlib.h>
 
@@ -17,8 +17,8 @@ struct CIR {
 #else
 	struct termios attributes;
 #endif
-	char tmp[16];
-	int initialized;
+	char buffer[16];
+	int status;
 };
 
 typedef struct CIR cir_t;

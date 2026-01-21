@@ -8,7 +8,7 @@
 #include "urlencode.h"
 #include "urldecode.h"
 #include "strsplit.h"
-#include "fstream.h"
+#include "fs/fstream.h"
 
 static const char AND = '&';
 static const char EQUAL[] = "=";
@@ -468,7 +468,10 @@ size_t query_dump_string(
 	
 	char* end = destination;
 	
-	const char separator[] = {query->sep, '\0'};
+	char sep[2];
+	
+	sep[0] = query->sep;
+	sep[1] = '\0';
 	
 	if (destination != NULL) {
 		*destination = '\0';
@@ -481,10 +484,10 @@ size_t query_dump_string(
 		
 		if (index != 0) {
 			if (destination != NULL) {
-				strcat(destination, separator);
+				strcat(destination, sep);
 			}
 			
-			size += strlen(separator);
+			size += strlen(sep);
 		}
 		
 		if (parameter->key != NULL) {
@@ -556,14 +559,17 @@ int query_load_string(
 	strsplit_t subsplit = {0};
 	strsplit_part_t subpart = {0};
 	
+	hquery_param_t param = {0};
+	
 	const char* end = NULL;
 	const char* match = NULL;
 	
-	const char separator[] = {query->sep, '\0'};
+	char sep[2];
 	
-	hquery_param_t param = {0};
+	sep[0] = query->sep;
+	sep[1] = '\0';
 	
-	strsplit_init(&split, &part, string, separator);
+	strsplit_init(&split, &part, string, sep);
 	
 	while (strsplit_next(&split, &part) != NULL) {
 		if (part.size == 0) {
@@ -663,7 +669,7 @@ int query_load_environ(hquery_t* const query) {
 	size_t index = 0;
 	size_t size = 0;
 	
-	char separator[] = {'\0', '\0'};
+	char sep[2];
 	
 	if (environ == NULL) {
 		err = -1;
@@ -672,10 +678,11 @@ int query_load_environ(hquery_t* const query) {
 	
 	query_init(query, 0, NULL);
 	
-	separator[0] = query->sep;
+	sep[0] = query->sep;
+	sep[1] = '\0';
 	
 	while ((item = environ[index++]) != NULL) {
-		size += strlen(item) + strlen(separator);
+		size += strlen(item) + strlen(sep);
 	}
 	
 	string = malloc(size + 1);
@@ -691,7 +698,7 @@ int query_load_environ(hquery_t* const query) {
 	
 	while ((item = environ[index++]) != NULL) {
 		if (string[0] != '\0') {
-			strcat(string, separator);
+			strcat(string, sep);
 		}
 		
 		strcat(string, item);

@@ -16,7 +16,7 @@
 	#include <OS.h>
 #endif
 
-#include "os/cpu.h"
+#include "os/cpuinfo.h"
 
 ssize_t get_nproc(void) {
 	/*

@@ -14,7 +14,7 @@
 #include "sutils.h"
 #include "fs/mkdir.h"
 #include "os/envdir.h"
-#include "os/cpu.h"
+#include "os/cpuinfo.h"
 
 #define CLI_OPTION_CONCURRENCY_MIN 1
 #define CLI_OPTION_CONCURRENCY_MAX 128

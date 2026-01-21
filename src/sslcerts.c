@@ -3,7 +3,7 @@
 
 #include <curl/curl.h>
 
-#include "fstream.h"
+#include "fs/fstream.h"
 #include "fs/getexec.h"
 #include "sslcerts.h"
 #include "fs/sep.h"

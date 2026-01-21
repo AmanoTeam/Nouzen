@@ -13,10 +13,10 @@
 	#include <sys/stat.h>
 #endif
 
-#include "walkdir.h"
+#include "fs/walkdir.h"
 
 #if defined(_WIN32)
-	#include "fs/absoluteness.h"
+	#include "fs/absrel.h"
 #endif
 
 #if defined(_WIN32) || defined(__HAIKU__)

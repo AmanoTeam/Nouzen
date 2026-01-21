@@ -18,8 +18,8 @@
 #include "nouzen.h"
 #include "wcurl.h"
 #include "program_help.h"
-#include "os/cpu.h"
-#include "distros.h"
+#include "os/cpuinfo.h"
+#include "os/osdetect.h"
 #include "nouzen.h"
 
 #define PKGS_QUEUE_MAX (128)
@@ -186,7 +186,7 @@ int main(int argc, argv_t* argv[]) {
 	int operation = 0;
 	ssize_t nproc = 0;
 	
-	char* operating_system = NULL;
+	const char* operating_system = NULL;
 	char* config_dir = NULL;
 	
 	char* value = NULL;
@@ -233,7 +233,7 @@ int main(int argc, argv_t* argv[]) {
 		goto end;
 	}
 	
-	operating_system = get_platform();
+	operating_system = osdetect_getplatform();
 	
 	if (operating_system == NULL) {
 		err = APTERR_PLATFORM_UNKNOWN;
@@ -439,7 +439,6 @@ int main(int argc, argv_t* argv[]) {
 	sslcerts_unload_certificates();
 	
 	free(config_dir);
-	free(operating_system);
 	
 	repolist_free(&list);
 	argparse_free(&argparse);

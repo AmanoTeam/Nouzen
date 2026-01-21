@@ -5,7 +5,7 @@
 #include <curl/urlapi.h>
 
 #include "wcurl.h"
-#include "fs/absoluteness.h"
+#include "fs/absrel.h"
 #include "fs/basename.h"
 #include "fs/sep.h"
 #include "base_uri.h"

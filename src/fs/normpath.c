@@ -15,7 +15,7 @@
 #endif
 
 #include "fs/sep.h"
-#include "fs/absoluteness.h"
+#include "fs/absrel.h"
 
 static const char* const INVALID_FILENAME_CHARS = "'%\" /\\:*?<>|^";
 

@@ -1,4 +1,4 @@
-#include "fstream.h"
+#include "fs/fstream.h"
 #include "package.h"
 #include "wcurl.h"
 

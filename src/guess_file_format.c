@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "guess_file_format.h"
-#include "fstream.h"
+#include "fs/fstream.h"
 
 static const char XZ_MAGIC[] = {
 	0xfd, 0x37, 0x7a, 0x58

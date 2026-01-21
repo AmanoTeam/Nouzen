@@ -4,7 +4,7 @@
 
 #include "options.h"
 #include "errors.h"
-#include "fstream.h"
+#include "fs/fstream.h"
 #include "query.h"
 #include "logging.h"
 #include "fs/sep.h"
@@ -13,7 +13,7 @@
 #include "fs/normpath.h"
 #include "fs/sep.h"
 #include "fs/exists.h"
-#include "os/cpu.h"
+#include "os/cpuinfo.h"
 
 static const char KOPT_CACHE[] = "cache";
 static const char KOPT_PARALLELISM[] = "parallelism";

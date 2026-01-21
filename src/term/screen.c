@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(_WIN32)
 	#include <windows.h>
@@ -6,8 +8,6 @@
 #endif
 
 #if !defined(_WIN32)
-	#include <stdlib.h>
-	#include <string.h>
 	#include <unistd.h>
 	#include <termios.h>
 	#include <errno.h>
@@ -15,7 +15,7 @@
 	#include <fcntl.h>
 #endif
 
-#include "terminal.h"
+#include "term/screen.h"
 
 #define TERMSZ_HEIGHT 0x00
 #define TERMSZ_WIDTH 0x01
@@ -266,7 +266,7 @@ int is_atty(FILE* file) {
 	
 }
 
-size_t get_terminal_size(const int spec) {
+static size_t get_terminal_size(const int spec) {
 	
 	long int size = 0;
 	size_t index = 0;

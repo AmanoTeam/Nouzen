@@ -6,24 +6,23 @@
 
 #include "ask.h"
 #include "buffer.h"
-#include "cir.h"
-#include "distros.h"
+#include "term/keyboard.h"
 #include "downloader.h"
 #include "errors.h"
 #include "format.h"
-#include "fs/absoluteness.h"
+#include "fs/absrel.h"
 #include "fs/basename.h"
-#include "fs/cd.h"
+#include "fs/chdir.h"
 #include "fs/exists.h"
-#include "fs/ext.h"
 #include "fs/getexec.h"
 #include "fs/mkdir.h"
-#include "fs/permissions.h"
+#include "fs/chmod.h"
 #include "fs/realpath.h"
 #include "fs/rm.h"
 #include "fs/sep.h"
-#include "fs/symlinks.h"
-#include "fstream.h"
+#include "fs/symlink.h"
+#include "fs/splitext.h"
+#include "fs/fstream.h"
 #include "guess_file_format.h"
 #include "guess_uri.h"
 #include "logging.h"
@@ -31,15 +30,16 @@
 #include "options.h"
 #include "os/envdir.h"
 #include "os/shell.h"
+#include "os/osdetect.h"
 #include "package.h"
 #include "pprint.h"
 #include "progress_callback.h"
 #include "query.h"
 #include "repository.h"
 #include "strsplit.h"
-#include "terminal.h"
+#include "term/screen.h"
 #include "uncompress.h"
-#include "walkdir.h"
+#include "fs/walkdir.h"
 #include "wcurl.h"
 #include "wildcard_match.h"
 #include "wpatchelf.h"
@@ -980,7 +980,7 @@ int repolist_load(repolist_t* const list) {
 	char* match = NULL;
 	
 	char* user_agent = NULL;
-	char* platform = NULL;
+	const char* operating_system = NULL;
 	
 	const char* repository = NULL;
 	const char* release = NULL;
@@ -1006,9 +1006,9 @@ int repolist_load(repolist_t* const list) {
 	walkdir_t walkdir = {0};
 	const walkdir_item_t* item = NULL;
 	
-	platform = get_platform();
+	operating_system = osdetect_getplatform();
 	
-	if (platform == NULL) {
+	if (operating_system == NULL) {
 		err = APTERR_PLATFORM_UNKNOWN;
 		goto end;
 	}
@@ -1022,7 +1022,7 @@ int repolist_load(repolist_t* const list) {
 	
 	curl = wcurl_getcurl(wcurl);
 	
-	user_agent = malloc(strlen(WCURL_USER_AGENT) + strlen(BRACKETS_START) + strlen(platform) + strlen(BRACKETS_END) + 1);
+	user_agent = malloc(strlen(WCURL_USER_AGENT) + strlen(BRACKETS_START) + strlen(operating_system) + strlen(BRACKETS_END) + 1);
 	
 	if (user_agent == NULL) {
 		err = APTERR_MEM_ALLOC_FAILURE;
@@ -1031,7 +1031,7 @@ int repolist_load(repolist_t* const list) {
 	
 	strcpy(user_agent, WCURL_USER_AGENT);
 	strcat(user_agent, BRACKETS_START);
-	strcat(user_agent, platform);
+	strcat(user_agent, operating_system);
 	strcat(user_agent, BRACKETS_END);
 	
 	code = curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
@@ -1334,7 +1334,6 @@ int repolist_load(repolist_t* const list) {
 	free(sources_directory);
 	free(pkgs_directory);
 	free(user_agent);
-	free(platform);
 	
 	walkdir_free(&walkdir);
 	
@@ -3149,7 +3148,7 @@ int repolist_install_single_package(
 				
 				loggln(LOG_VERBOSE, "Symlinking '%s' to '%s'", filename, entry);
 				
-				if (create_symlink(filename, entry) != 0) {
+				if (mklink(filename, entry) != 0) {
 					err = APTERR_FS_SYMLINK_FAILURE;
 					goto end;
 				}
@@ -3206,21 +3205,21 @@ int repolist_install_single_package(
 			continue;
 		}
 		
-		file_extension = getext(entry);
+		file_extension = splitext_get(entry);
 		
 		if (file_extension != NULL && (strcmp(file_extension, "o") == 0 || strcmp(file_extension, "a") == 0)) {
 			continue;
 		}
 		
-		status = get_file_permissions(filename);
+		status = chmod_getmode(filename);
 		
 		if (status == -1) {
 			err = APTERR_FS_GTMOD_FAILURE;
 			goto end;
 		}
 		
-		if ((status & FMODE_USER_WRITE) == 0) {
-			status = set_file_writable(filename);
+		if ((status & CHMOD_USER_WRITE) == 0) {
+			status = chmod_setmode(filename, CHMOD_USER_WRITE);
 			
 			if (status != 0) {
 				err = APTERR_FS_CHMOD_FAILURE;
@@ -3329,7 +3328,7 @@ int repolist_install_single_package(
 			
 			loggln(LOG_VERBOSE, "Symlinking '%s' to '%s'", filename, item->name);
 			
-			if (create_symlink(filename, item->name) != 0) {
+			if (mklink(filename, item->name) != 0) {
 				err = APTERR_FS_SYMLINK_FAILURE;
 				goto end;
 			}

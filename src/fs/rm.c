@@ -12,10 +12,10 @@
 #endif
 
 #if defined(_WIN32)
-	#include "fs/absoluteness.h"
+	#include "fs/absrel.h"
 #endif
 
-#include "walkdir.h"
+#include "fs/walkdir.h"
 #include "fs/sep.h"
 #include "fs/rm.h"
 

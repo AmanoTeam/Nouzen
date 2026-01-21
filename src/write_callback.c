@@ -5,7 +5,7 @@
 #include "repository.h"
 #include "logging.h"
 #include "buffer.h"
-#include "fstream.h"
+#include "fs/fstream.h"
 #include "write_callback.h"
 
 size_t write_string_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {

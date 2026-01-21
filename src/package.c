@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "strsplit.h"
-#include "fstream.h"
+#include "fs/fstream.h"
 #include "query.h"
 #include "package.h"
 #include "logging.h"
@@ -233,12 +233,12 @@ void pkgs_free(
 	const int copy
 ) {
 	
+	size_t index = 0;
+	pkg_t* pkg = NULL;
+	
 	if (pkgs == NULL) {
 		return;
 	}
-	
-	size_t index = 0;
-	pkg_t* pkg = NULL;
 	
 	/* If the items within the list are not independent copies, we should not free them */
 	for (index = 0; copy && index < pkgs->offset; index++) {
@@ -388,7 +388,7 @@ const strsplit_part_t* pkglist_split_next(
 	//match = strstr(part->begin, "|");
 	
 	if (match != part->begin && match != NULL && match < end) {
-		part->size -= (size_t) (end - match) + 1;
+		part->size -= (size_t) ((end - match) + 1);
 		end = (part->begin + part->size);
 	}
 	

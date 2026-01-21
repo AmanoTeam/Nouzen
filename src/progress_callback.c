@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "terminal.h"
+#include "term/screen.h"
 
 void download_progress_callback(const size_t total, const size_t current) {
 	

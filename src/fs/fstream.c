@@ -13,10 +13,10 @@
 	#include <sys/file.h>
 #endif
 
-#include "fstream.h"
+#include "fs/fstream.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
-	#include "fs/absoluteness.h"
+	#include "fs/absrel.h"
 	#include "fs/sep.h"
 #endif
 
@@ -180,6 +180,11 @@ fstream_t* fstream_fdopen(const int fd, const fstream_mode_t mode) {
 	
 	fstream_t* stream = NULL;
 	
+	#if !defined(_WIN32)
+		FILE* file = NULL;
+		const char* flags = NULL;
+	#endif
+	
 	stream = malloc(sizeof(*stream));
 	
 	if (stream == NULL) {
@@ -197,8 +202,7 @@ fstream_t* fstream_fdopen(const int fd, const fstream_mode_t mode) {
 			return NULL;
 		}
 	#else
-		FILE* file = NULL;
-		const char* flags = fstream_getmode(mode);
+		flags = fstream_getmode(mode);
 		
 		file = fdopen(fd, flags);
 		

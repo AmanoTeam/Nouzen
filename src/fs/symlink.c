@@ -1,30 +1,27 @@
 #include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 
 #if defined(_WIN32)
 	#include <windows.h>
-	#include <winbase.h>
-	#include <string.h>
+	#include <fileapi.h>
 #endif
 
 #if !defined(_WIN32)
-	#include <errno.h>
-	#include <stdio.h>
+	#include <sys/stat.h>
+	#include <unistd.h>
+	#include <limits.h>
 #endif
 
 #if defined(_WIN32)
 	#include "fs/absrel.h"
+	#include "fs/sep.h"
+	#include "fs/exists.h"
 #endif
 
-#include "fs/cp.h"
-#include "fs/rm.h"
-#include "fs/mv.h"
-
-int move_file(const char* const source, const char* const destination) {
+int mklink(const char* const source, const char* const destination) {
 	/*
-	Moves a file from source to destination.
-	
-	Symlinks are not followed: if source is a symlink, it is itself moved, not it's target.
-	If destination already exists, it will be overwritten.
+	Create a symbolic link.
 	
 	Returns (0) on success, (-1) on error.
 	*/
@@ -32,16 +29,22 @@ int move_file(const char* const source, const char* const destination) {
 	int err = 0;
 	
 	#if defined(_WIN32)
-		BOOL status = FALSE;
+		int flags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 		
 		#if defined(_UNICODE)
 			wchar_t* wsource = NULL;
 			wchar_t* wdestination = NULL;
 			
 			int wfilenames = 0;
-			
-			/* This prefix is required to support long paths in Windows 10+ */
-			size_t prefixs = isabsolute(source) ? wcslen(WIN10_LONG_PATH_PREFIX) : 0;
+			size_t prefixs = 0;
+		#endif
+		
+		if (directory_exists(source)) {
+			flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+		}
+		
+		#if defined(_UNICODE)
+			prefixs = isabsolute(source) ? wcslen(WIN10_LONG_PATH_PREFIX) : 0;
 			
 			wfilenames = MultiByteToWideChar(CP_UTF8, 0, source, -1, NULL, 0);
 			
@@ -81,45 +84,18 @@ int move_file(const char* const source, const char* const destination) {
 				goto end;
 			}
 			
-			status = MoveFileExW(wsource, wdestination, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING);
+			if (CreateSymbolicLinkW(wsource, wdestination, flags) == FALSE) {
+				err = -1;
+				goto end;
+			}
 		#else
-			status = MoveFileExA(source, destination, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING);
+			if (CreateSymbolicLinkA(source, destination, flags) == FALSE) {
+				err = -1;
+				goto end;
+			}
 		#endif
-		
-		if (status) {
-			goto end;
-		}
-		
-		if (GetLastError() != ERROR_ACCESS_DENIED) {
-			err = -1;
-			goto end;
-		}
-		
-		if (copy_file(source, destination) == -1) {
-			err = -1;
-			goto end;
-		}
-		
-		if (remove_file(source) == -1) {
-			err = -1;
-			goto end;
-		}
 	#else
-		if (rename(source, destination) == 0) {
-			goto end;
-		}
-		
-		if (errno != EXDEV) {
-			err = -1;
-			goto end;
-		}
-		
-		if (copy_file(source, destination) == -1) {
-			err = -1;
-			goto end;
-		}
-		
-		if (remove_file(source) == -1) {
+		if (symlink(source, destination) == -1) {
 			err = -1;
 			goto end;
 		}
@@ -133,5 +109,36 @@ int move_file(const char* const source, const char* const destination) {
 	#endif
 	
 	return err;
+	
+}
+
+char* get_symlink(const char* const path) {
+	
+	char* location = NULL;
+	
+	#if defined(_WIN32)
+		return location;
+	#else
+		ssize_t size = 0;
+		
+		location = malloc(PATH_MAX);
+		
+		if (location == NULL) {
+			goto end;
+		}
+		
+		size = readlink(path, location, sizeof(location));
+		
+		if (size == -1) {
+			free(location);
+			goto end;
+		}
+		
+		location[(size_t) size] = '\0';
+	#endif
+	
+	end:;
+	
+	return location;
 	
 }
