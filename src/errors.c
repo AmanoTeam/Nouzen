@@ -75,6 +75,8 @@ const char* apterr_getmessage(const int code) {
 			return "The metadata section of this package is invalid";
 		case APTERR_PACKAGE_UNSATISFIED_DEPENDENCY:
 			return "This package has an unsatisfiable dependency";
+		case APTERR_PACKAGE_SEARCH_NO_MATCHES:
+			return "No packages matched the query";
 		case APTERR_PATCHELF_INIT_FAILURE:
 			return "Could not initialize the patchelf utility";
 		case APTERR_PKG_DATA_FILE_MISSING:

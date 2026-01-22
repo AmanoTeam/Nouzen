@@ -7,10 +7,10 @@ import json
 
 parser = argparse.ArgumentParser(
 	prog = "nz",
-	description = "A command-line utility to download and install packages from APT repositories.",
+	description = "A command-line utility for downloading and installing packages from APT repositories.",
 	allow_abbrev = False,
 	add_help = False,
-	epilog = "Note, options that take an argument require a equal sign. E.g. --install=PACKAGE"
+	epilog = "Note: options that take a value must use an equal sign (e.g. --install=PACKAGE)."
 )
 
 parser.add_argument(
@@ -18,21 +18,21 @@ parser.add_argument(
 	"--help",
 	required = False,
 	action = "store_true",
-	help = "Show this help message and exit."
+	help = "Display this help text and exit."
 )
 
 parser.add_argument(
 	"-v",
 	"--version",
 	action = "store_true",
-	help = "Display the Nouzen version and exit."
+	help = "Print version information and exit."
 )
 
 parser.add_argument(
 	"--update",
 	required = False,
 	action = "store_true",
-	help = "Update the repository package index."
+	help = "Synchronize the local package index with remote repositories."
 )
 
 parser.add_argument(
@@ -40,7 +40,7 @@ parser.add_argument(
 	"--install",
 	metavar = "PACKAGE",
 	required = False,
-	help = "Specify a semicolon-separated (;) list of packages to install."
+	help = "Install one or more packages. Use a semicolon-separated list (e.g. 'pkg1;pkg2')."
 )
 
 parser.add_argument(
@@ -48,14 +48,22 @@ parser.add_argument(
 	"--uninstall",
 	metavar = "PACKAGE",
 	required = False,
-	help = "Specify a semicolon-separated (;) list of packages to uninstall."
+	help = "Uninstall one or more packages. Use a semicolon-separated list (e.g. 'pkg1;pkg2')."
+)
+
+parser.add_argument(
+	"-s",
+	"--search",
+	metavar = "PACKAGE",
+	required = False,
+	help = "Search available repositories for packages matching the given query."
 )
 
 parser.add_argument(
 	"-c",
 	"--concurrency",
 	required = False,
-	help = "Specify how many packages should be downloaded simultaneously. Pass (0) to use the number of available CPU cores or (1) to disable parallelism."
+	help = "Set the number of parallel downloads. Use '0' for automatic detection, or '1' to disable parallelism."
 )
 
 parser.add_argument(
@@ -63,14 +71,14 @@ parser.add_argument(
 	"--force-refresh",
 	required = False,
 	action = "store_true",
-	help = "Invalidate the cached repository index and force a refresh of the package list."
+	help = "Force a complete rebuild of the local repository index."
 )
 
 parser.add_argument(
 	"-p",
 	"--prefix",
 	required = False,
-	help = "Specify the install location for packages."
+	help = "Specify an alternate installation root (prefix) for packages."
 )
 
 parser.add_argument(
@@ -78,13 +86,13 @@ parser.add_argument(
 	"--assume-yes",
 	required = False,
 	action = "store_true",
-	help = "Assume 'yes' for all prompts and run in non-interactive mode."
+	help = "Automatically answer 'yes' to all prompts (non-interactive mode)."
 )
 
 parser.add_argument(
 	"--loglevel",
 	required = False,
-	help = "Set the logging level to show more or fewer logs. Options are 'quiet', 'standard', 'warning', 'error', or 'verbose'."
+	help = "Set output verbosity. Valid levels: 'quiet', 'standard', 'warning', 'error', 'verbose'."
 )
 
 os.environ["LINES"] = "1000"

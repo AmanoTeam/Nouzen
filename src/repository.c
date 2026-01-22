@@ -545,6 +545,20 @@ static int repo_set_uri(
 	
 }
 
+static int repotype_unstringify(const char* const value) {
+	
+	if (strcmp(value, "apt") == 0) {
+		return REPO_TYPE_APT;
+	}
+	
+	if (strcmp(value, "apk") == 0) {
+		return REPO_TYPE_APK;
+	}
+	
+	return REPO_TYPE_UNKNOWN;
+	
+}
+
 int repo_load_string(
 	repo_t* const repo,
 	const char* const string,
@@ -655,24 +669,11 @@ int repo_load_string(
 			continue;
 		}
 		
-		if (*section != '\0') {
+		if (*section != '\0' && pkg_key_matches(part.begin)) {
 			strcat(section, "\n");
 		}
 		
 		strncat(section, part.begin, part.size);
-		
-		while (part.begin[part.size - 1] == ',') {
-			if (strsplit_next(&split, &part) == NULL) {
-				break;
-			}
-			
-			if (part.size == 0) {
-				break;
-			}
-			
-			strcat(section, " ");
-			strncat(section, part.begin, part.size);
-		}
 	}
 	
 	if (cache) {
@@ -986,6 +987,7 @@ int repolist_load(repolist_t* const list) {
 	const char* release = NULL;
 	const char* resources = NULL;
 	const char* architecture = NULL;
+	const char* type = NULL;
 	
 	const char* file_extension = NULL;
 	
@@ -1168,6 +1170,23 @@ int repolist_load(repolist_t* const list) {
 		
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
 		
+		/* Type */
+		type = query_get_string(&query, "type");
+		
+		if (type == NULL) {
+			err = APTERR_REPO_CONF_MISSING_FIELD;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Read repository property (type = %s)", type);
+		
+		repo.type = repotype_unstringify(type);
+		
+		if (repo.type == REPO_TYPE_UNKNOWN) {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
+			goto end;
+		}
+		
 		strsplit_init(&split, &part, resources, " ");
 		
 		while (strsplit_next(&split, &part) != NULL) {
@@ -1200,6 +1219,25 @@ int repolist_load(repolist_t* const list) {
 			strncat(repo.name, part.begin, part.size);
 			strcat(repo.name, KHYPHEN);
 			strcat(repo.name, architecture);
+			
+			repo.resource = malloc(part.size + 1);
+			
+			if (repo.resource == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strncpy(repo.resource, part.begin, part.size);
+			repo.resource[part.size] = '\0';
+			
+			repo.release = malloc(strlen(release) + 1);
+			
+			if (repo.release == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(repo.release, release);
 			
 			free(url);
 			
@@ -1502,8 +1540,8 @@ pkg_t* repolist_get_pkg(
 	
 }
 
-repo_t* repolist_get_source(
-	repolist_t* const list,
+repo_t* repolist_get_pkg_repo(
+	const repolist_t* const list,
 	const pkg_t* const pkg
 ) {
 	/*
@@ -1534,6 +1572,114 @@ repo_t* repolist_get_source(
 	}
 	
 	return NULL;
+	
+}
+
+ssize_t repolist_search_pkg(
+	const repolist_t* const list,
+	const char* const query,
+	const pkgs_paging_t paging,
+	pkgs_t* const results
+) {
+	/*
+	Search all repositories for packages matching the given query.
+	
+	Returns the number of matched results, or -1 on error.
+	*/
+	
+	int matches = 0;
+	
+	size_t index = 0;
+	size_t subindex = 0;
+	
+	ssize_t offset = 0;
+	
+	const size_t skip = (paging.maximum * paging.position);
+	
+	size_t current = 0;
+	
+	repo_t* repo = NULL;
+	pkg_t* pkg = NULL;
+	
+	for (index = 0; index < list->offset; index++) {
+		repo = &list->items[index];
+		
+		for (subindex = 0; subindex < repo->pkgs.offset; subindex++) {
+			pkg = repo->pkgs.items[subindex];
+			
+			matches = (query == NULL);
+			
+			if (!matches) {
+				matches = strstr(pkg->name, query) != NULL;
+			}
+			
+			if (!matches) {
+				matches = pkg->provides != NULL && strstr(pkg->provides, query) != NULL;
+			}
+			
+			if (!matches) {
+				matches = pkg->replaces != NULL && strstr(pkg->replaces, query) != NULL;
+			}
+			
+			if (!matches) {
+				continue;
+			}
+			
+			current++;
+			
+			if (skip != 0 && current <= skip) {
+				continue;
+			}
+			
+			if (pkgs_append(results, pkg, 0) != APTERR_SUCCESS) {
+				return -1;
+			}
+			
+			offset++;
+			
+			if (((size_t) offset) >= paging.maximum) {
+				return offset;
+			}
+		}
+	}
+	
+	return offset;
+	
+}
+
+int repolist_resolve_maintainers(
+	const repolist_t* const list,
+	pkg_t* const pkg
+) {
+	
+	int err = APTERR_SUCCESS;
+	
+	maintainers_t maintainers = {0};
+	
+	(void) list;
+	
+	err = maintainers_parse(&maintainers, pkg->maintainer);
+	
+	if (err != APTERR_SUCCESS) {
+		goto end;
+	}
+	
+	pkg->maintainer = malloc(sizeof(maintainers));
+	
+	if (pkg->maintainer == NULL) {
+		err = APTERR_MEM_ALLOC_FAILURE;
+		goto end;
+	}
+	
+	memcpy(pkg->maintainer, &maintainers, sizeof(maintainers));
+	
+	end:;
+	
+	if (err != APTERR_SUCCESS) {
+		maintainers_free(&maintainers);
+	}
+	
+	return err;
 	
 }
 
@@ -1569,6 +1715,10 @@ int repolist_resolve_related(
 		case REPOLIST_RESOLVE_BREAKS:
 			value = pkg->breaks;
 			destination = &pkg->breaks;
+			break;
+		case REPOLIST_RESOLVE_REPLACES:
+			value = pkg->replaces;
+			destination = &pkg->replaces;
 			break;
 		case REPOLIST_RESOLVE_SUGGESTS:
 			value = pkg->suggests;
@@ -1852,7 +2002,7 @@ int repolist_resolve_deps(
 		goto end;
 	}
 	
-	repo = repolist_get_source(list, pkg);
+	repo = repolist_get_pkg_repo(list, pkg);
 	base_uri = repo_get_uri(repo);
 	
 	err = uri_resolve(base_uri, pkg->filename, &uri);
@@ -1876,6 +2026,7 @@ int repolist_resolve_deps(
 	
 	if (pkg->installed) {
 		query_init(query, '\n', ":");
+		
 		err = query_load_file(query, installation->filename);
 		
 		if (err != 0) {
@@ -1933,6 +2084,22 @@ int repolist_resolve_deps(
 	if (pkg->recommends != NULL) {
 		err = repolist_resolve_related(list, pkg, REPOLIST_RESOLVE_RECOMMENDS);
 	
+		if (err != APTERR_SUCCESS) {
+			goto end;
+		}
+	}
+	
+	if (pkg->replaces != NULL) {
+		err = repolist_resolve_related(list, pkg, REPOLIST_RESOLVE_REPLACES);
+	
+		if (err != APTERR_SUCCESS) {
+			goto end;
+		}
+	}
+	
+	if (pkg->maintainer != NULL) {
+		err = repolist_resolve_maintainers(list, pkg);
+		
 		if (err != APTERR_SUCCESS) {
 			goto end;
 		}
@@ -2425,6 +2592,10 @@ int repolist_install_package(
 	options = get_options();
 	
 	err = repolist_fetch_packages(list, packages, &direct, &indirect);
+	
+	if (err != APTERR_SUCCESS) {
+		goto end;
+	}
 	
 	pkgsiter_init(&iter, &indirect);
 	
@@ -3412,6 +3583,12 @@ void repo_free(repo_t* const repo) {
 	
 	free(repo->name);
 	repo->name = NULL;
+	
+	free(repo->resource);
+	repo->resource = NULL;
+	
+	free(repo->release);
+	repo->release = NULL;
 	
 	pkgs_free(&repo->pkgs, 1);
 	

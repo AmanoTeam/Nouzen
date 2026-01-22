@@ -16,11 +16,14 @@
 #include "logging.h"
 #include "sslcerts.h"
 #include "nouzen.h"
+#include "format.h"
 #include "wcurl.h"
 #include "program_help.h"
 #include "os/cpuinfo.h"
 #include "os/osdetect.h"
 #include "nouzen.h"
+#include "term/keyboard.h"
+#include "term/screen.h"
 
 #define PKGS_QUEUE_MAX (128)
 
@@ -62,6 +65,11 @@ static const char KOPT_HELP[] = "help";
 static const char KOPT_V[] = "v";
 static const char KOPT_VERSION[] = "version";
 
+static const char KOPT_S[] = "s";
+static const char KOPT_SEARCH[] = "search";
+
+static const char KOPT_SHOW[] = "show";
+
 #define ACTION_UNKNOWN (0x00)
 #define ACTION_INSTALL (0x01)
 #define ACTION_UNINSTALL (0x02)
@@ -74,6 +82,8 @@ static const char KOPT_VERSION[] = "version";
 #define ACTION_DESTROY (0x09)
 #define ACTION_HELP (0x10)
 #define ACTION_VERSION (0x11)
+#define ACTION_SEARCH (0x12)
+#define ACTION_SHOW (0x13)
 
 static int get_action(const arg_t* const arg) {
 	
@@ -172,9 +182,259 @@ static int get_action(const arg_t* const arg) {
 		return ACTION_VERSION;
 	}
 	
+	status = (
+		strcmp(arg->key, KOPT_SEARCH) == 0 ||
+		strcmp(arg->key, KOPT_S) == 0
+	);
+	
+	if (status) {
+		return ACTION_SEARCH;
+	}
+	
+	status = (
+		strcmp(arg->key, KOPT_SHOW) == 0
+	);
+	
+	if (status) {
+		return ACTION_SHOW;
+	}
+	
 	return ACTION_UNKNOWN;
 	
 }
+
+static int repolist_perform_search(repolist_t* const repolist, const char* const query) {
+	
+	int err = APTERR_SUCCESS;
+	int paginate = 1;
+	
+	ssize_t status = 0;
+	size_t index = 0;
+	
+	repo_t* repo = NULL;
+	
+	cir_t cir = {0};
+	const cir_key_t* key = NULL;
+	
+	pkgs_t pkgs = {0};
+	pkgs_paging_t paging = {0};
+	
+	pkg_t* pkg = NULL;
+	
+	paging.maximum = 15;
+	
+	cir_init(&cir);
+	
+	hide_cursor();
+	
+	while (1) {
+		status = repolist_search_pkg(repolist, query, paging, &pkgs);
+		
+		if (paging.position == 0) {
+			if (status < 1) {
+				err = APTERR_PACKAGE_SEARCH_NO_MATCHES;
+				goto end;
+			}
+			
+			paginate = (((size_t) status) == paging.maximum);
+		}
+		
+		if (paginate) {
+			erase_screen();
+		}
+		
+		for (index = 0; index < pkgs.offset; index++) {
+			pkg = pkgs.items[index];
+			
+			repo = repolist_get_pkg_repo(repolist, pkg);
+			
+			printf(
+				"\r\n\033[92m%s\033[0m/%s %s %s\r\n  %s\r\n",
+				pkg->name,
+				repo->release,
+				pkg->version,
+				repoarch_unstringify(pkg->arch),
+				pkg->description
+			);
+		}
+		
+		if (!paginate) {
+			printf("\r\n");
+			goto end;
+		}
+		
+		printf("\r\nPress 'q' to quit, or navigate using the arrow keys (left, up, right, down).");
+		fflush(stdout);
+		
+		input:;
+		
+		key = cir_get(&cir);
+		
+		switch (key->type) {
+			case KEY_PAGE_UP:
+			case KEY_ARROW_LEFT:
+			case KEY_ARROW_UP:
+			case KEY_HOME: {
+				if (paging.position == 0) {
+					goto input;
+				}
+				
+				paging.position -= 1;
+				
+				break;
+			}
+			case KEY_PAGE_DOWN:
+			case KEY_ARROW_RIGHT:
+			case KEY_ARROW_DOWN:
+			case KEY_END: {
+				if (((size_t) status) < paging.maximum) {
+					goto input;
+				}
+				
+				paging.position += 1;
+				
+				break;
+			}
+			case KEY_CTRL_BACKSLASH:
+			case KEY_CTRL_C:
+			case KEY_CTRL_D:
+			case KEY_Q: {
+				printf("\r\n");
+				goto end;
+			}
+			default: {
+				goto input;
+			}
+		}
+	}
+	
+	end:;
+	
+	show_cursor();
+	cir_free(&cir);
+	
+	return err;
+	
+}
+
+static int repolist_perform_show(repolist_t* const repolist, const char* const query) {
+	
+	int err = APTERR_SUCCESS;
+	
+	size_t index = 0;
+	size_t subindex = 0;
+	
+	repo_t* repo = NULL;
+	
+	pkg_t* pkg = NULL;
+	const pkg_t* subpkg = NULL;
+	
+	maintainer_t* maintainer = NULL;
+	maintainers_t* maintainers = NULL;
+	
+	pkgs_t* pkgs = NULL;
+	
+	const char* key = NULL;
+	
+	char package_size[BTOS_MAX_SIZE];
+	
+	pkg = repolist_get_pkg(repolist, query);
+	
+	if (pkg == NULL) {
+		err = APTERR_PACKAGE_SEARCH_NO_MATCHES;
+		goto end;
+	}
+	
+	err = repolist_resolve_deps(repolist, pkg);
+	
+	if (err != APTERR_SUCCESS) {
+		goto end;
+	}
+	
+	repo = repolist_get_pkg_repo(repolist, pkg);
+	
+	maintainers = pkg->maintainer;
+	
+	printf("\r\nPackage: %s\r\n", pkg->name);
+	printf("Version: %s\r\n", pkg->version);
+	
+	if (pkg->maintainer != NULL) {
+		printf("Maintainer: ");
+		
+		for (index = 0; index < maintainers->offset; index++) {
+			maintainer = &maintainers->items[index];
+			printf(
+				"%s%s <%s>",
+				((index == 0) ? "" : ", "),
+				maintainer->name,
+				((maintainer->email == NULL) ? "user@example.com" : maintainer->email)
+			);
+		}
+		
+		printf("\r\n");
+	}
+	
+	btos(pkg->installed_size, package_size);
+	printf("Installed-Size: %s\r\n", package_size);
+	
+	for (index = 0; index < 3; index++) {
+		switch (index) {
+			case 0: {
+				key = "Depends";
+				pkgs = pkg->depends;
+				break;
+			}
+			case 1: {
+				key = "Breaks";
+				pkgs = pkg->breaks;
+				break;
+			}
+			case 2: {
+				key = "Replaces";
+				pkgs = pkg->replaces;
+				break;
+			}
+		}
+		
+		if (pkgs == NULL) {
+			continue;
+		}
+		
+		printf("%s: ", key);
+		
+		for (subindex = 0; subindex < pkgs->offset; subindex++) {
+			subpkg = pkgs->items[subindex];
+			printf("%s%s", ((subindex == 0) ? "" : ", "), subpkg->name);
+		}
+		
+		printf("\r\n");
+	}
+	
+	if (pkg->homepage != NULL) {
+		printf("Homepage: %s\r\n", pkg->homepage);
+	}
+	
+	btos(pkg->size, package_size);
+	printf("Download-Size: %s\r\n", package_size);
+	
+	printf("APT-Manual-Installed: %s\r\n", ((pkg->autoinstall) ? "no": "yes"));
+	
+	key = repoarch_unstringify(pkg->arch);
+	
+	printf("APT-Sources: %s %s/%s %s Packages\r\n", repo->base_uri.value, repo->release, repo->resource, key);
+	
+	if (pkg->description != NULL) {
+		printf("Description: %s\r\n", pkg->description);
+	}
+	
+	printf("\r\n");
+	
+	end:;
+	
+	return err;
+	
+}
+
 
 int main(int argc, argv_t* argv[]) {
 	
@@ -185,6 +445,8 @@ int main(int argc, argv_t* argv[]) {
 	int action = 0;
 	int operation = 0;
 	ssize_t nproc = 0;
+	
+	const char* search_query = NULL;
 	
 	const char* operating_system = NULL;
 	char* config_dir = NULL;
@@ -270,7 +532,9 @@ int main(int argc, argv_t* argv[]) {
 			case ACTION_UNINSTALL:
 			case ACTION_PARALLELISM:
 			case ACTION_PREFIX:
-			case ACTION_LOGLEVEL: {
+			case ACTION_LOGLEVEL:
+			case ACTION_SEARCH:
+			case ACTION_SHOW: {
 				if (arg->value == NULL) {
 					err = APTERR_ARGPARSE_ARGUMENT_VALUE_MISSING;
 					goto end;
@@ -366,6 +630,12 @@ int main(int argc, argv_t* argv[]) {
 				printf("%s v%s (%s)\n", PROJECT_NAME, PROJECT_VERSION, operating_system);
 				goto end;
 			}
+			case ACTION_SEARCH:
+			case ACTION_SHOW: {
+				search_query = arg->value;
+				operation = action;
+				break;
+			}
 			case ACTION_UNKNOWN: {
 				err = APTERR_ARGPARSE_ARGUMENT_INVALID;
 				goto end;
@@ -392,6 +662,14 @@ int main(int argc, argv_t* argv[]) {
 		}
 		case ACTION_DESTROY: {
 			err = repolist_destroy(&list);
+			break;
+		}
+		case ACTION_SEARCH: {
+			err = repolist_perform_search(&list, search_query);
+			break;
+		}
+		case ACTION_SHOW: {
+			err = repolist_perform_show(&list, search_query);
 			break;
 		}
 		default: {

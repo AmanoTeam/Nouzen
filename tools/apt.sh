@@ -21,6 +21,9 @@ while [[ "${#}" -gt '0' ]]; do
 		action='--destroy'
 	elif [ "${1}" = 'remove' ] || [ "${1}" = 'uninstall' ] || [ "${1}" = 'autoremove' ] || [ "${1}" = 'purge' ]; then
 		action='--uninstall'
+	elif [ "${1}" = 'search' ] || [ "${1}" = 'show' ]; then
+		arg+="--${1}='${2}'"
+		shift
 	elif [[ "${1}" = '-p' || "${1}" = '--prefix' || "${1}" = '--install-prefix' || \
 		"${1}" = '-c' || "${1}" = '--concurrency' || "${1}" = '--parallelism' || \
 		"${1}" = '--loglevel' ]]; then

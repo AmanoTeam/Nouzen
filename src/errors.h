@@ -31,53 +31,54 @@
 #define APTERR_FS_RM_FAILURE -21 /* Could not delete file/directory */
 #define APTERR_FS_SYMLINK_FAILURE -22 /* Could not create symbolic link */
 #define APTERR_FS_WALKDIR_FAILURE -23 /* Could not iterate over the files at the specified location */
-#define APTERR_FS_CHDIR_FAILURE -23 /* Could not change the current working directory */
+#define APTERR_FS_CHDIR_FAILURE -24 /* Could not change the current working directory */
 
-#define APTERR_GET_APP_DIRECTORY_FAILURE -24 /* Could not get application directory */
+#define APTERR_GET_APP_DIRECTORY_FAILURE -25 /* Could not get application directory */
 
-#define APTERR_LOAD_UNSUPPORTED_URI -25 /* Could not load repository from this URI; either this protocol is not supported or it was not recognized */
+#define APTERR_LOAD_UNSUPPORTED_URI -26 /* Could not load repository from this URI; either this protocol is not supported or it was not recognized */
 
-#define APTERR_MEM_ALLOC_FAILURE -26 /* Could not allocate memory */
+#define APTERR_MEM_ALLOC_FAILURE -27 /* Could not allocate memory */
 
-#define APTERR_NO_TMPDIR -27 /* Could not find a suitable directory for storing temporary files */
+#define APTERR_NO_TMPDIR -28 /* Could not find a suitable directory for storing temporary files */
 
-#define APTERR_PACKAGE_DEPENDENCY_LOOP -28 /* Dependency loop */
-#define APTERR_PACKAGE_MISSING_FILENAME -29 /* The metadata section of this package is missing the 'Filename' field */
-#define APTERR_PACKAGE_MISSING_NAME -30 /* The metadata section of this package is missing the 'Package' field */
-#define APTERR_PACKAGE_MISSING_VERSION -31 /* The metadata section of this package is missing the 'Version' field */
-#define APTERR_PACKAGE_SECTION_INVALID -32 /* The metadata section of this package is invalid */
-#define APTERR_PACKAGE_UNSATISFIED_DEPENDENCY -33 /* This package has an unsatisfiable dependency */
+#define APTERR_PACKAGE_DEPENDENCY_LOOP -29 /* Dependency loop */
+#define APTERR_PACKAGE_MISSING_FILENAME -30 /* The metadata section of this package is missing the 'Filename' field */
+#define APTERR_PACKAGE_MISSING_NAME -31 /* The metadata section of this package is missing the 'Package' field */
+#define APTERR_PACKAGE_MISSING_VERSION -32 /* The metadata section of this package is missing the 'Version' field */
+#define APTERR_PACKAGE_SECTION_INVALID -33 /* The metadata section of this package is invalid */
+#define APTERR_PACKAGE_UNSATISFIED_DEPENDENCY -34 /* This package has an unsatisfiable dependency */
+#define APTERR_PACKAGE_SEARCH_NO_MATCHES -35 /* No packages matched the query */
+#define APTERR_PKG_DATA_FILE_MISSING -36 /* Could not find the 'data.tar' file inside the package archive */
+#define APTERR_PKG_METADATA_WRITE_FAILURE -37 /* Could not write package metadata */
+#define APTERR_PKG_RESOLVE_URI_FAILURE -38 /* Could not resolve URI to a valid resource */
 
-#define APTERR_PATCHELF_INIT_FAILURE -34 /* Could not initialize the patchelf utility */
+#define APTERR_PATCHELF_INIT_FAILURE -39 /* Could not initialize the patchelf utility */
 
-#define APTERR_PKG_DATA_FILE_MISSING -35 /* Could not find the 'data.tar' file inside the package archive */
-#define APTERR_PKG_METADATA_WRITE_FAILURE -36 /* Could not write package metadata */
-#define APTERR_PKG_RESOLVE_URI_FAILURE -37 /* Could not resolve URI to a valid resource */
+#define APTERR_PLATFORM_UNKNOWN -40 /* Cannot detect current platform */
 
-#define APTERR_PLATFORM_UNKNOWN -38 /* Cannot detect current platform */
+#define APTERR_REPO_CONF_MISSING_FIELD -41 /* This configuration file is missing required fields */
+#define APTERR_REPO_CONF_PARSE_FAILURE -42 /* Could not parse repository source list file */
+#define APTERR_REPO_GET_CONFDIR_FAILURE -43 /* Could not get configuration directory */
+#define APTERR_REPO_GET_PKGSDIR_FAILURE -44 /* Could not get packages directory */
+#define APTERR_REPO_GET_SRCDIR_FAILURE -45 /* Could not get sources directory */
+#define APTERR_REPO_LOAD_NO_SOURCES_AVAILABLE -46 /* No repository sources have been configured yet */
+#define APTERR_REPO_LOAD_UNSUPPORTED_URI -47 /* Could not load repository index from this URI; either this protocol is not supported or it was not recognized */
+#define APTERR_REPO_PKG_INDEX_TOO_LARGE -48 /* This package index exceeds the maximum allowed size */
+#define APTERR_REPO_UNKNOWN_ARCHITECTURE -49 /* Unknown repository architecture */
+#define APTERR_REPO_UNKNOWN_FORMAT -499 /* Unknown repository format */
 
-#define APTERR_REPO_CONF_MISSING_FIELD -39 /* This configuration file is missing required fields */
-#define APTERR_REPO_CONF_PARSE_FAILURE -40 /* Could not parse repository source list file */
-#define APTERR_REPO_GET_CONFDIR_FAILURE -41 /* Could not get configuration directory */
-#define APTERR_REPO_GET_PKGSDIR_FAILURE -42 /* Could not get packages directory */
-#define APTERR_REPO_GET_SRCDIR_FAILURE -43 /* Could not get sources directory */
-#define APTERR_REPO_LOAD_NO_SOURCES_AVAILABLE -44 /* No repository sources have been configured yet */
-#define APTERR_REPO_LOAD_UNSUPPORTED_URI -45 /* Could not load repository index from this URI; either this protocol is not supported or it was not recognized */
-#define APTERR_REPO_PKG_INDEX_TOO_LARGE -46 /* This package index exceeds the maximum allowed size */
-#define APTERR_REPO_UNKNOWN_ARCHITECTURE -47 /* Unknown repository architecture */
+#define APTERR_WCURLMLT_ADD_FAILURE -50 /* Could not add the cURL handler to cURL multi */
+#define APTERR_WCURLMLT_INIT_FAILURE -51 /* Could not initialize the cURL multi interface */
+#define APTERR_WCURLMLT_PERFORM_FAILURE -52 /* Could not perform on cURL multi */
+#define APTERR_WCURLMLT_POLL_FAILURE -53 /* Could not poll on cURL multi */
+#define APTERR_WCURLMLT_REMOVE_FAILURE -54 /* Could not remove the cURL handler from cURL multi */
+#define APTERR_WCURLMLT_SETOPT_FAILURE -55 /* Could not set options on cURL multi */
 
-#define APTERR_WCURLMLT_ADD_FAILURE -48 /* Could not add the cURL handler to cURL multi */
-#define APTERR_WCURLMLT_INIT_FAILURE -49 /* Could not initialize the cURL multi interface */
-#define APTERR_WCURLMLT_PERFORM_FAILURE -50 /* Could not perform on cURL multi */
-#define APTERR_WCURLMLT_POLL_FAILURE -51 /* Could not poll on cURL multi */
-#define APTERR_WCURLMLT_REMOVE_FAILURE -52 /* Could not remove the cURL handler from cURL multi */
-#define APTERR_WCURLMLT_SETOPT_FAILURE -53 /* Could not set options on cURL multi */
-
-#define APTERR_WCURL_GETINFO_FAILURE -54 /* Could not get info about HTTP transfer */
-#define APTERR_WCURL_INIT_FAILURE -55 /* Could not initialize the HTTP client due to an unexpected error */
-#define APTERR_WCURL_REQUEST_FAILURE -56 /* HTTP request failure */
-#define APTERR_WCURL_SETOPT_FAILURE -57 /* Could not set options on HTTP client */
-#define APTERR_WCURL_SLIST_FAILURE -58 /* Could not append item to list */
+#define APTERR_WCURL_GETINFO_FAILURE -56 /* Could not get info about HTTP transfer */
+#define APTERR_WCURL_INIT_FAILURE -57 /* Could not initialize the HTTP client due to an unexpected error */
+#define APTERR_WCURL_REQUEST_FAILURE -58 /* HTTP request failure */
+#define APTERR_WCURL_SETOPT_FAILURE -59 /* Could not set options on HTTP client */
+#define APTERR_WCURL_SLIST_FAILURE -60 /* Could not append item to list */
 
 const char* apterr_getmessage(const int code);
 

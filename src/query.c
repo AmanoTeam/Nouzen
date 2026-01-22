@@ -626,6 +626,10 @@ int query_load_string(
 		if (strncmp(end, query->subsep, strlen(query->subsep)) == 0) {
 			match = strchr(end, query->sep);
 			
+			if (match == NULL) {
+				match = strchr(end, '\0');
+			}
+			
 			if (match != NULL) {
 				subpart.size += (size_t) (match - end);
 			}

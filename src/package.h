@@ -44,12 +44,16 @@ struct Package {
 	size_t index;
 	char* name;
 	char* version;
+	char* description;
 	void* depends;
 	void* provides;
 	void* recommends;
 	void* suggests;
 	void* breaks;
 	void* replaces;
+	void* maintainer;
+	char* homepage;
+	char* bugs;
 	installation_t installation;
 	biguint_t size;
 	biguint_t installed_size;
@@ -74,6 +78,21 @@ struct PkgsIter {
 	size_t index;
 	struct Packages* packages;
 };
+
+struct Maintainer {
+	char* name;
+	char* email;
+};
+
+typedef struct Maintainer maintainer_t;
+
+struct Maintainers {
+	size_t size;
+	size_t offset;
+	maintainer_t* items;
+};
+
+typedef struct Maintainers maintainers_t;
 
 typedef struct Package pkg_t;
 typedef struct Packages pkgs_t;
@@ -130,6 +149,12 @@ void pkgs_free(
 	const int copy
 );
 
+int maintainers_parse(maintainers_t* const maintainers, const char* const value);
+void maintainers_free(maintainers_t* const maintainers);
+
 architecture_t get_architecture(const char* const name);
+const char* repoarch_unstringify(const architecture_t value);
+
+int pkg_key_matches(const char* const line);
 
 #endif
