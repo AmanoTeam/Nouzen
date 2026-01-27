@@ -1461,7 +1461,7 @@ int repolist_load(repolist_t* const list) {
 			
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
-					strcat(url, KBINARY);
+					strcat(url, KPACKAGES);
 					break;
 				}
 				case REPO_TYPE_APK: {
