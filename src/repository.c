@@ -988,9 +988,10 @@ int repolist_load(repolist_t* const list) {
 	const char* release = NULL;
 	const char* resources = NULL;
 	const char* architecture = NULL;
-	const char* type = NULL;
+	int type = 0;
 	
 	const char* file_extension = NULL;
+	const char* value = NULL;
 	
 	options_t* options = NULL;
 	pkg_t* pkg = NULL;
@@ -1172,23 +1173,23 @@ int repolist_load(repolist_t* const list) {
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
 		
 		/* Type */
-		type = query_get_string(&query, "type");
+		value = query_get_string(&query, "type");
 		
-		if (type == NULL) {
+		if (value == NULL) {
 			err = APTERR_REPO_CONF_MISSING_FIELD;
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Read repository property (type = %s)", type);
+		loggln(LOG_VERBOSE, "Read repository property (type = %s)", value);
 		
-		repo.type = repotype_unstringify(type);
+		type = repotype_unstringify(value);
 		
-		if (repo.type == REPO_TYPE_UNKNOWN) {
+		if (type == REPO_TYPE_UNKNOWN) {
 			err = APTERR_REPO_UNKNOWN_FORMAT;
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Read format '%s' matched as value '%i'", type, repo.type);
+		loggln(LOG_VERBOSE, "Repository format '%s' matched as value '%i'", value, type);
 		
 		strsplit_init(&split, &part, resources, " ");
 		
@@ -1198,6 +1199,8 @@ int repolist_load(repolist_t* const list) {
 			}
 			
 			memset(&repo, 0, sizeof(repo));
+			
+			repo.type = type;
 			
 			repo.architecture = get_architecture(architecture);
 			
@@ -1302,7 +1305,7 @@ int repolist_load(repolist_t* const list) {
 			
 			strcat(url, architecture);
 			strcat(url, PATHSEP_POSIX_S);
-			
+			printf("repo.type -> %i\n", repo.type);
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
 					strcat(url, KBINARY);
