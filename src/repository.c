@@ -662,7 +662,7 @@ int repo_load_string(
 	
 	switch (repo->type) {
 		case REPO_TYPE_APT: {
-			strcat(index_file, KPACKAGES);
+			strcat(index_file, "data");
 			break;
 		}
 		case REPO_TYPE_APK: {
