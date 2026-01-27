@@ -1301,6 +1301,7 @@ int repolist_load(repolist_t* const list) {
 			strcat(url, architecture);
 			strcat(url, PATHSEP_POSIX_S);
 			
+			printf("%i\n", repo.type);
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
 					strcat(url, KBINARY);
