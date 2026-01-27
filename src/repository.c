@@ -1188,7 +1188,7 @@ int repolist_load(repolist_t* const list) {
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Repository format (value = %i)", repo.type);
+		loggln(LOG_VERBOSE, "Read format '%s' matched as value '%i'", type, repo.type);
 		
 		strsplit_init(&split, &part, resources, " ");
 		
