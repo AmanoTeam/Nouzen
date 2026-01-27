@@ -651,7 +651,7 @@ int repo_load_string(
 		strlen(KPACKAGES) +
 		1
 	);
-	puts(index_file);
+	
 	if (index_file == NULL) {
 		err = APTERR_MEM_ALLOC_FAILURE;
 		goto end;
@@ -674,7 +674,7 @@ int repo_load_string(
 			goto end;
 		}
 	}
-	
+	puts(index_file);
 	if (format != GUESS_FILE_FORMAT_SOMETHING_ELSE) {
 		loggln(
 			LOG_VERBOSE,
