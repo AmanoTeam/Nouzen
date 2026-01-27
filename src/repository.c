@@ -831,7 +831,7 @@ int repo_load_string(
 	
 	end:;
 	
-	remove_directory_contents(temporary_directory);
+	//remove_directory_contents(temporary_directory);
 	
 	query_free(&query);
 	free(section);
