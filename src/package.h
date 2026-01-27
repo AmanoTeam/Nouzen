@@ -5,6 +5,22 @@
 #include "strsplit.h"
 #include "biggestint.h"
 
+#define PKG_SECTION_FIELD_NAME 0x01
+#define PKG_SECTION_FIELD_VERSION 0x02
+#define PKG_SECTION_FIELD_DESCRIPTION 0x03
+#define PKG_SECTION_FIELD_DEPENDS 0x04
+#define PKG_SECTION_FIELD_PROVIDES 0x05
+#define PKG_SECTION_FIELD_RECOMMENDS 0x06
+#define PKG_SECTION_FIELD_SUGGESTS 0x07
+#define PKG_SECTION_FIELD_BREAKS 0x08
+#define PKG_SECTION_FIELD_REPLACES 0x09
+#define PKG_SECTION_FIELD_MAINTAINER 0x0A
+#define PKG_SECTION_FIELD_HOMEPAGE 0x0B
+#define PKG_SECTION_FIELD_BUGS 0x0C
+#define PKG_SECTION_FIELD_SIZE 0x0E
+#define PKG_SECTION_FIELD_INSTALLED_SIZE 0x0F
+#define PKG_SECTION_FIELD_FILENAME 0x10
+
 enum Architecture {
 	ARCH_UNKNOWN,
 	ARCH_AMD64,
@@ -99,11 +115,6 @@ typedef struct Packages pkgs_t;
 typedef struct PkgsIter pkgs_iter_t;
 typedef struct Depends depends_t;
 
-int pkg_parse(
-	hquery_t* const query,
-	pkg_t* const pkg
-);
-
 void pkgs_free(
 	pkgs_t * const pkgs,
 	const int copy
@@ -155,6 +166,6 @@ void maintainers_free(maintainers_t* const maintainers);
 architecture_t get_architecture(const char* const name);
 const char* repoarch_unstringify(const architecture_t value);
 
-int pkg_key_matches(const char* const line);
+int pkg_key_matches(const int type, const char* const line);
 
 #endif

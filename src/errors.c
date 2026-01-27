@@ -81,6 +81,8 @@ const char* apterr_getmessage(const int code) {
 			return "Could not initialize the patchelf utility";
 		case APTERR_PKG_DATA_FILE_MISSING:
 			return "Could not find the 'data.tar' file inside the package archive";
+		case APTERR_PKG_CONTROL_FILE_MISSING:
+			return "Could not find the 'control' file inside the package archive";
 		case APTERR_PKG_METADATA_WRITE_FAILURE:
 			return "Could not write package metadata";
 		case APTERR_PKG_RESOLVE_URI_FAILURE:
@@ -105,6 +107,8 @@ const char* apterr_getmessage(const int code) {
 			return "This package index exceeds the maximum allowed size";
 		case APTERR_REPO_UNKNOWN_ARCHITECTURE:
 			return "Unknown repository architecture";
+		case APTERR_REPO_UNKNOWN_FORMAT:
+			return "Unknown repository format";
 		case APTERR_WCURLMLT_ADD_FAILURE:
 			return "Could not add the cURL handler to cURL multi";
 		case APTERR_WCURLMLT_INIT_FAILURE:

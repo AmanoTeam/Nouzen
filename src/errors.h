@@ -49,6 +49,7 @@
 #define APTERR_PACKAGE_UNSATISFIED_DEPENDENCY -34 /* This package has an unsatisfiable dependency */
 #define APTERR_PACKAGE_SEARCH_NO_MATCHES -35 /* No packages matched the query */
 #define APTERR_PKG_DATA_FILE_MISSING -36 /* Could not find the 'data.tar' file inside the package archive */
+#define APTERR_PKG_CONTROL_FILE_MISSING -366 /* Could not find the 'control' file inside the package archive */
 #define APTERR_PKG_METADATA_WRITE_FAILURE -37 /* Could not write package metadata */
 #define APTERR_PKG_RESOLVE_URI_FAILURE -38 /* Could not resolve URI to a valid resource */
 

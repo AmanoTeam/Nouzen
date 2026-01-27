@@ -66,7 +66,7 @@ const strsplit_part_t* strsplit_next(
 	
 	part_size = (size_t) (strsplit->pend - strsplit->pbegin);
 	
-	part->begin = strsplit->pbegin;
+	part->begin = (char*) strsplit->pbegin;
 	part->size = part_size;
 	
 	if (part_size > 0) {
@@ -107,7 +107,7 @@ const strsplit_part_t* strsplit_next(
 		}
 		
 		if (end != start) {
-			part->begin = start;
+			part->begin = (char*) start;
 			part->size = (size_t) (end - start);
 		}
 	}
@@ -180,5 +180,18 @@ size_t strsplit_size(
 	memcpy(part, &part2, sizeof(part2));
 	
 	return size;
+	
+}
+
+char* strsplit_findstr(strsplit_part_t* const part, const char* const pattern) {
+	
+	char* const begin = strstr(part->begin, pattern);
+	const char* const end = (part->begin + part->size);
+	
+	if (begin > end) {
+		return NULL;
+	}
+	
+	return begin;
 	
 }

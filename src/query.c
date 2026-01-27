@@ -74,6 +74,10 @@ hquery_param_t* query_get_param(
 	
 	size_t index = 0;
 	
+	if (key == NULL) {
+		return NULL;
+	}
+	
 	for (index = 0; index < query->offset; index++) {
 		hquery_param_t* const parameter = &query->parameters[index];
 		

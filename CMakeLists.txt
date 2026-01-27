@@ -10,6 +10,7 @@ project(
 
 option(NOUZEN_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
 option(NOUZEN_ENABLE_UNICODE "Enable unicode support for Windows builds" ON)
+option(NOUZEN_DBG "Enable building the main executable with debugging symbols even in release builds" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -682,6 +683,14 @@ target_compile_options(
 	PRIVATE
 	${WARNING_OPTIONS}
 )
+
+if (NOUZEN_DBG)
+	target_compile_options(
+		nz
+		PRIVATE
+		-g
+	)
+endif()
 
 target_compile_definitions(
 	nz

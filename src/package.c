@@ -8,7 +8,11 @@
 #include "logging.h"
 #include "errors.h"
 
-static const char* PKG_SECTION_KEYS[] = {
+#define REPO_TYPE_UNKNOWN (0x00)
+#define REPO_TYPE_APT (0x01)
+#define REPO_TYPE_APK (0x02)
+
+static const char* APT_SECTION_KEYS[] = {
 	"Architecture",
 	"Breaks",
 	"Bugs",
@@ -67,20 +71,59 @@ static const char* PKG_SECTION_KEYS[] = {
 	"X-Cargo-Built-Using"
 };
 
-int pkg_key_matches(const char* const line) {
+static const char* APK_SECTION_KEYS[] = {
+	"C",
+	"P",
+	"V",
+	"A",
+	"S",
+	"I",
+	"T",
+	"U",
+	"L",
+	"o",
+	"m",
+	"t",
+	"c",
+	"D",
+	"p"
+};
+
+int pkg_key_matches(const int type, const char* const line) {
 	
 	size_t index = 0;
+	
 	size_t size = 0;
+	size_t offset = 0;
 	
 	int matches = 0;
 	
 	const char* key = NULL;
+	const char** items = NULL;
 	
-	for (index = 0; index < sizeof(PKG_SECTION_KEYS) / sizeof(*PKG_SECTION_KEYS); index++) {
-		key = PKG_SECTION_KEYS[index];
+	switch (type) {
+		case REPO_TYPE_APT: {
+			items = APT_SECTION_KEYS;
+			offset = sizeof(APT_SECTION_KEYS) / sizeof(*APT_SECTION_KEYS);
+			break;
+		}
+		case REPO_TYPE_APK: {
+			items = APK_SECTION_KEYS;
+			offset = sizeof(APK_SECTION_KEYS) / sizeof(*APK_SECTION_KEYS);
+			break;
+		}
+		default: {
+			items = NULL;
+			offset = 0;
+			break;
+		}
+	}
+	
+	for (index = 0; index < offset; index++) {
+		key = items[index];
 		size = strlen(key);
 		
-		matches = (strncmp(key, line, size) == 0);
+		matches = (strncmp(key, line, size) == 0 && line[size] == ':');
 		
 		if (!matches) {
 			continue;
@@ -90,227 +133,6 @@ int pkg_key_matches(const char* const line) {
 	}
 	
 	return matches;
-	
-}
-
-int pkg_parse(
-	hquery_t* const query,
-	pkg_t* const pkg
-) {
-	
-	int err = APTERR_SUCCESS;
-	
-	const char* value = NULL;
-	
-	memset(pkg, 0, sizeof(*pkg));
-	
-	/* Package */
-	value = query_get_string(query, "Package");
-	
-	if (value == NULL) {
-		err = APTERR_PACKAGE_MISSING_NAME;
-		goto end;
-	}
-	
-	pkg->name = malloc(strlen(value) + 1);
-	
-	if (pkg->name == NULL) {
-		err = APTERR_MEM_ALLOC_FAILURE;
-		goto end;
-	}
-	
-	strcpy(pkg->name, value);
-	
-	/* Description */
-	value = query_get_string(query, "Description");
-	
-	if (value != NULL) {
-		pkg->description = malloc(strlen(value) + 1);
-		
-		if (pkg->description == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->description, value);
-	}
-	
-	/* Homepage */
-	value = query_get_string(query, "Homepage");
-	
-	if (value != NULL) {
-		pkg->homepage = malloc(strlen(value) + 1);
-		
-		if (pkg->homepage == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->homepage, value);
-	}
-	
-	/* Bugs */
-	value = query_get_string(query, "Bugs");
-	
-	if (value != NULL) {
-		pkg->bugs = malloc(strlen(value) + 1);
-		
-		if (pkg->bugs == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->bugs, value);
-	}
-	
-	/* Maintainer */
-	value = query_get_string(query, "Maintainer");
-	
-	if (value != NULL) {
-		pkg->maintainer = malloc(strlen(value) + 1);
-		
-		if (pkg->maintainer == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->maintainer, value);
-	}
-	
-	/* Filename */
-	value = query_get_string(query, "Filename");
-	
-	if (value == NULL) {
-		err = APTERR_PACKAGE_MISSING_FILENAME;
-		goto end;
-	}
-	
-	pkg->filename = malloc(strlen(value) + 1);
-	
-	if (pkg->filename == NULL) {
-		err = APTERR_MEM_ALLOC_FAILURE;
-		goto end;
-	}
-	
-	strcpy(pkg->filename, value);
-	
-	/* Version */
-	value = query_get_string(query, "Version");
-	
-	if (value == NULL) {
-		err = APTERR_PACKAGE_MISSING_VERSION;
-		goto end;
-	}
-	
-	pkg->version = malloc(strlen(value) + 1);
-	
-	if (pkg->version == NULL) {
-		err = APTERR_MEM_ALLOC_FAILURE;
-		goto end;
-	}
-	
-	strcpy(pkg->version, value);
-	
-	/* Provides */
-	value = query_get_string(query, "Provides");
-	
-	if (value != NULL) {
-		pkg->provides = malloc(strlen(value) + 1);
-		
-		if (pkg->provides == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->provides, value);
-	}
-	
-	/* Suggests */
-	value = query_get_string(query, "Suggests");
-	
-	if (value != NULL) {
-		pkg->suggests = malloc(strlen(value) + 1);
-		
-		if (pkg->suggests == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->suggests, value);
-	}
-	
-	/* Recommends */
-	value = query_get_string(query, "Recommends");
-	
-	if (value != NULL) {
-		pkg->recommends = malloc(strlen(value) + 1);
-		
-		if (pkg->recommends == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->recommends, value);
-	}
-	
-	/* Depends */
-	value = query_get_string(query, "Depends");
-	
-	if (value != NULL) {
-		pkg->depends = malloc(strlen(value) + 1);
-		
-		if (pkg->depends == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->depends, value);
-	}
-	
-	/* Breaks */
-	value = query_get_string(query, "Breaks");
-	
-	if (value != NULL) {
-		pkg->breaks = malloc(strlen(value) + 1);
-		
-		if (pkg->breaks == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->breaks, value);
-	}
-	
-	/* Replaces */
-	value = query_get_string(query, "Replaces");
-	
-	if (value != NULL) {
-		pkg->replaces = malloc(strlen(value) + 1);
-		
-		if (pkg->replaces == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(pkg->replaces, value);
-	}
-	
-	/* Size */
-	pkg->size = query_get_uint(query, "Size");
-	
-	/* Installed-Size */
-	pkg->installed_size = query_get_uint(query, "Installed-Size");
-	
-	if (pkg->installed_size != 0) {
-		pkg->installed_size = pkg->installed_size * 1000;
-	}
-	
-	pkg->autoinstall = -1;
-	pkg->removable = -1;
-	
-	end:;
-	
-	return err;
 	
 }
 

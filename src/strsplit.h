@@ -17,7 +17,7 @@ struct strsplit {
 struct strsplit_part {
 	size_t index;
 	size_t size;
-	const char* begin;
+	char* begin;
 };
 
 typedef struct strsplit strsplit_t;
@@ -44,5 +44,7 @@ size_t strsplit_size(
 	strsplit_t* const strsplit,
 	strsplit_part_t* const part
 );
+
+char* strsplit_findstr(strsplit_part_t* const part, const char* const pattern);
 
 #endif
