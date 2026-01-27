@@ -1188,6 +1188,8 @@ int repolist_load(repolist_t* const list) {
 			goto end;
 		}
 		
+		loggln(LOG_VERBOSE, "Repository format (value = %i)", repo.type);
+		
 		strsplit_init(&split, &part, resources, " ");
 		
 		while (strsplit_next(&split, &part) != NULL) {
@@ -1301,7 +1303,6 @@ int repolist_load(repolist_t* const list) {
 			strcat(url, architecture);
 			strcat(url, PATHSEP_POSIX_S);
 			
-			printf("%i\n", repo.type);
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
 					strcat(url, KBINARY);
@@ -1310,6 +1311,10 @@ int repolist_load(repolist_t* const list) {
 				case REPO_TYPE_APK: {
 					strcat(url, KAPKINDEX);
 					break;
+				}
+				default: {
+					err = APTERR_REPO_UNKNOWN_FORMAT;
+					goto end;
 				}
 			}
 			puts(url);
