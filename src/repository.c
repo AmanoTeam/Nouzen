@@ -1282,13 +1282,21 @@ int repolist_load(repolist_t* const list) {
 			
 			strcpy(url, repository);
 			strcat(url, PATHSEP_POSIX_S);
-			strcat(url, KDISTS);
-			strcat(url, PATHSEP_POSIX_S);
+			
+			if (repo.type == REPO_TYPE_APT) {
+				strcat(url, KDISTS);
+				strcat(url, PATHSEP_POSIX_S);
+			}
+			
 			strcat(url, release);
 			strcat(url, PATHSEP_POSIX_S);
 			strncat(url, part.begin, part.size);
 			strcat(url, PATHSEP_POSIX_S);
-			strcat(url, KBINARY);
+			
+			if (repo.type == REPO_TYPE_APT) {
+				strcat(url, KBINARY);
+			}
+			
 			strcat(url, architecture);
 			strcat(url, PATHSEP_POSIX_S);
 			strcat(url, KPACKAGES);
