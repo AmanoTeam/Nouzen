@@ -83,7 +83,7 @@ static const char KINSTALL[] = "install";
 static const char KDISTS[] = "dists";
 static const char KBINARY[] = "binary-";
 static const char KPACKAGES[] = "Packages";
-static const char KAPKINDEX[] = "APKINDEX";
+static const char KAPKINDEX[] = "APKINDEX.tar";
 static const char KHYPHEN[] = "-";
 
 static const char* const SYSTEM_LIBRARY_PATH[] = {
@@ -1305,7 +1305,7 @@ int repolist_load(repolist_t* const list) {
 			
 			strcat(url, architecture);
 			strcat(url, PATHSEP_POSIX_S);
-			printf("repo.type -> %i\n", repo.type);
+			
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
 					strcat(url, KBINARY);
