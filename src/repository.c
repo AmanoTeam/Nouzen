@@ -680,21 +680,6 @@ int repo_load_string(
 			LOG_VERBOSE,
 			"Package index file is a compressed archive; attempting to decompress"
 		);
-		/*
-		err = buffer_init(&buffer, APT_MAX_PKG_INDEX_LEN);
-		
-		if (err != 0) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		err = uncompress(string, size, &write_string_cb, &buffer, NULL);
-		
-		if (err != 0) {
-			err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
-			goto end;
-		}
-		*/
 		
 		err = uncompress(string, size, NULL, NULL, NULL);
 		
@@ -703,14 +688,7 @@ int repo_load_string(
 			goto end;
 		}
 		
-		/*
-		loggln(
-			LOG_VERBOSE,
-			"Package index decompressed successfully (%zu -> %zu)",
-			size,
-			buffer.offset
-		);
-		*/
+		loggln(LOG_VERBOSE, "Open package index file from '%s'", index_file);
 		
 		stream = fstream_open(index_file, FSTREAM_READ);
 		
