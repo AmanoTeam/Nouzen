@@ -181,7 +181,7 @@ int uncompress(
 			err = -1;
 			goto end;
 		}
-		puts(archive_entry_pathname(entry));
+		
 		if (entries != NULL) {
 			pathname = archive_entry_pathname(entry);
 			err = entries_append(entries, pathname);

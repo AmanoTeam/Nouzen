@@ -83,7 +83,7 @@ static const char KINSTALL[] = "install";
 static const char KDISTS[] = "dists";
 static const char KBINARY[] = "binary-";
 static const char KPACKAGES[] = "Packages";
-static const char KAPKINDEX[] = "APKINDEX.tar";
+static const char KAPKINDEX[] = "APKINDEX";
 static const char KHYPHEN[] = "-";
 
 static const char* const SYSTEM_LIBRARY_PATH[] = {
@@ -188,6 +188,42 @@ const char* get_triplet(const architecture_t architecture) {
 	}
 	
 	return NULL;
+	
+}
+
+char* get_local_temp_dir(void) {
+	
+	char* directory = NULL;
+	char* temporary_directory = NULL;
+	
+	directory = get_temp_dir();
+	
+	if (directory == NULL) {
+		return directory;
+	}
+	
+	temporary_directory = malloc(
+		strlen(directory) +
+		strlen(PATHSEP_S) +
+		strlen(PROJECT_NAME_LOWERCASE) + 1
+	);
+	
+	if (temporary_directory == NULL) {
+		free(directory);
+		return NULL;
+	}
+	
+	strcpy(temporary_directory, directory);
+	strcat(temporary_directory, PATHSEP_S);
+	strcat(temporary_directory, PROJECT_NAME_LOWERCASE);
+	
+	if (create_directory(temporary_directory) != 0) {
+		free(directory);
+		free(temporary_directory);
+		return NULL;
+	}
+	
+	return temporary_directory;
 	
 }
 
@@ -570,8 +606,12 @@ int repo_load_string(
 	int status = 0;
 	int err = 0;
 	
-	size_t index = 0;
+	long int file_size = 0;
 	
+	fstream_t* stream = NULL;
+	
+	size_t index = 0;
+	ssize_t rsize = 0;
 	strsplit_t split = {0};
 	strsplit_part_t part = {0};
 	
@@ -581,18 +621,66 @@ int repo_load_string(
 	
 	char* section = NULL;
 	
+	char* index_file = NULL;
+	
+	char* directory = NULL;
+	char* temporary_directory = NULL;
+	
 	const char* source = string;
 	
 	buffer_t buffer = {0};
 	
 	const int format = format_guess_string(string);
 	
+	temporary_directory = get_local_temp_dir();
+	
+	if (temporary_directory == NULL) {
+		err = APTERR_NO_TMPDIR;
+		goto end;
+	}
+	
+	if (set_current_directory(temporary_directory) != 0) {
+		err = APTERR_FS_CHDIR_FAILURE;
+		goto end;
+	}
+	
+	index_file = malloc(
+		strlen(temporary_directory) +
+		strlen(PATHSEP_S) +
+		strlen(KAPKINDEX) +
+		strlen(KPACKAGES) +
+		1
+	);
+	
+	if (index_file == NULL) {
+		err = APTERR_MEM_ALLOC_FAILURE;
+		goto end;
+	}
+	
+	strcpy(index_file, temporary_directory);
+	strcat(index_file, PATHSEP_S);
+	
+	switch (repo->type) {
+		case REPO_TYPE_APT: {
+			strcat(index_file, KPACKAGES);
+			break;
+		}
+		case REPO_TYPE_APK: {
+			strcat(index_file, KAPKINDEX);
+			break;
+		}
+		default: {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
+			goto end;
+		}
+	}
+	
 	if (format != GUESS_FILE_FORMAT_SOMETHING_ELSE) {
 		loggln(
 			LOG_VERBOSE,
 			"Package index file is a compressed archive; attempting to decompress"
 		);
-		
+		/*
 		err = buffer_init(&buffer, APT_MAX_PKG_INDEX_LEN);
 		
 		if (err != 0) {
@@ -606,13 +694,73 @@ int repo_load_string(
 			err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
 			goto end;
 		}
+		*/
 		
+		err = uncompress(string, size, NULL, NULL, NULL);
+		
+		if (err != 0) {
+			err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
+			goto end;
+		}
+		
+		/*
 		loggln(
 			LOG_VERBOSE,
 			"Package index decompressed successfully (%zu -> %zu)",
 			size,
 			buffer.offset
 		);
+		*/
+		
+		stream = fstream_open(index_file, FSTREAM_READ);
+		
+		if (stream == NULL) {
+			err = APTERR_FSTREAM_OPEN_FAILURE;
+			goto end;
+		}
+		
+		status = fstream_seek(stream, 0, FSTREAM_SEEK_END);
+		
+		if (status == -1) {
+			err = APTERR_FSTREAM_SEEK_FAILURE;
+			goto end;
+		}
+		
+		file_size = fstream_tell(stream);
+		
+		if (file_size == -1) {
+			err = APTERR_FSTREAM_TELL_FAILURE;
+			goto end;
+		}
+		
+		if (file_size == 0) {
+			err = APTERR_FSTREAM_READ_EMPTY_FILE;
+			goto end;
+		}
+		
+		status = fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN);
+		
+		if (status == -1) {
+			err = APTERR_FSTREAM_SEEK_FAILURE;
+			goto end;
+		}
+		
+		err = buffer_init(&buffer, (size_t) file_size + 1);
+		
+		if (err != 0) {
+			err = APTERR_MEM_ALLOC_FAILURE;
+			goto end;
+		}
+		
+		rsize = fstream_read(stream, buffer.data, (size_t) file_size);
+		
+		if (rsize == -1) {
+			err = APTERR_FSTREAM_READ_FAILURE;
+			goto end;
+		}
+		
+		buffer.data[rsize] = '\0';
+		buffer.offset = rsize;
 		
 		source = buffer.data;
 	}
@@ -683,8 +831,11 @@ int repo_load_string(
 	
 	end:;
 	
+	remove_directory_contents(temporary_directory);
+	
 	query_free(&query);
 	free(section);
+	free(temporary_directory);
 	buffer_free(&buffer);
 	
 	return err;
@@ -1278,7 +1429,9 @@ int repolist_load(repolist_t* const list) {
 				strlen(PATHSEP_POSIX_S) +
 				strlen(KBINARY) + strlen(architecture) +
 				strlen(PATHSEP_POSIX_S) +
-				strlen(KPACKAGES) + 1 + 3 + 1
+				strlen(KPACKAGES) +
+				strlen(TAR_FILE_EXT) +
+				1 + 3 + 1
 			);
 			
 			if (url == NULL) {
@@ -1313,6 +1466,7 @@ int repolist_load(repolist_t* const list) {
 				}
 				case REPO_TYPE_APK: {
 					strcat(url, KAPKINDEX);
+					strcat(url, TAR_FILE_EXT);
 					break;
 				}
 				default: {
@@ -1320,7 +1474,7 @@ int repolist_load(repolist_t* const list) {
 					goto end;
 				}
 			}
-			puts(url);
+			
 			match = strchr(url, '\0');
 			
 			for (index = 0; index < sizeof(PACKAGES_FILE_EXT) / sizeof(*PACKAGES_FILE_EXT); index++) {
@@ -2768,7 +2922,7 @@ int repolist_install_package(
 	}
 	
 	dlopts.concurrency = options->concurrency;
-	dlopts.temporary_directory = get_temp_dir();
+	dlopts.temporary_directory = get_local_temp_dir();
 	dlopts.progress_callback = download_progress_callback;
 	dlopts.retry = 8;
 	
@@ -3032,7 +3186,7 @@ int repolist_install_single_package(
 	
 	options = get_options();
 	
-	directory = get_temp_dir();
+	directory = get_local_temp_dir();
 	
 	if (directory == NULL) {
 		err = APTERR_NO_TMPDIR;
@@ -3041,8 +3195,6 @@ int repolist_install_single_package(
 	
 	temporary_directory = malloc(
 		strlen(directory) +
-		strlen(PATHSEP_S) +
-		strlen(PROJECT_NAME_LOWERCASE) +
 		strlen(PATHSEP_S) +
 		strlen(pkg->name) +
 		1
@@ -3054,8 +3206,6 @@ int repolist_install_single_package(
 	}
 	
 	strcpy(temporary_directory, directory);
-	strcat(temporary_directory, PATHSEP_S);
-	strcat(temporary_directory, PROJECT_NAME_LOWERCASE);
 	strcat(temporary_directory, PATHSEP_S);
 	strcat(temporary_directory, pkg->name);
 	
