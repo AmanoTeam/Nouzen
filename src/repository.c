@@ -1311,7 +1311,7 @@ int repolist_load(repolist_t* const list) {
 					break;
 				}
 			}
-			
+			puts(url);
 			match = strchr(url, '\0');
 			
 			for (index = 0; index < sizeof(PACKAGES_FILE_EXT) / sizeof(*PACKAGES_FILE_EXT); index++) {
