@@ -1757,7 +1757,7 @@ int repolist_load(repolist_t* const list) {
 		
 		type = repotype_unstringify(value);
 		
-		if (repo.type == REPO_TYPE_UNKNOWN) {
+		if (type == REPO_TYPE_UNKNOWN) {
 			err = APTERR_REPO_UNKNOWN_FORMAT;
 			goto end;
 		}
