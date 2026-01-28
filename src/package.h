@@ -115,12 +115,6 @@ typedef struct Packages pkgs_t;
 typedef struct PkgsIter pkgs_iter_t;
 typedef struct Depends depends_t;
 
-int pkg_parse(
-	const int type,
-	hquery_t* const query,
-	pkg_t* const pkg
-);
-
 void pkgs_free(
 	pkgs_t * const pkgs,
 	const int copy
