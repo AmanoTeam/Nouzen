@@ -712,9 +712,13 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 		while (1) {
 			a = *begin;
 			
-			if (a == ':') {
-				part.begin = ++begin;
-				continue;
+			if (a == ':'} {
+				if (strncmp("cmd:", part.begin, 4) == 0 || strncmp("so:", part.begin, 3) == 0) {
+					part.begin = ++begin;
+					continue;
+				}
+				
+				*begin = '-';
 			}
 			
 			if (a == '>' || a == '<' || a == '=') {
@@ -2075,8 +2079,8 @@ pkg_t* pkgs_get_virt_pkg(
 		strsplit_init(&split, &part, pkg->provides, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
-			matches = strncmp(name, part.begin, size) == 0 && size == part.size;
-			//printf("%.*s\n", (int) part.size, part.begin);
+			matches = (strncmp(name, part.begin, size) == 0 && size == part.size);
+			
 			if (!matches) {
 				continue;
 			}
@@ -2087,7 +2091,9 @@ pkg_t* pkgs_get_virt_pkg(
 		strsplit_init(&split, &part, pkg->replaces, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
-			if (strncmp(name, part.begin, size) != 0) {
+			matches = (strncmp(name, part.begin, size) == 0 && size == part.size);
+			
+			if (!matches) {
 				continue;
 			}
 			
