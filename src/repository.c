@@ -2164,7 +2164,8 @@ int repolist_resolve_deps(
 	
 	repo = repolist_get_pkg_repo(list, pkg);
 	base_uri = repo_get_uri(repo);
-	
+	puts(repo->uri.value);
+	puts(repo->base_uri.value);
 	err = uri_resolve(base_uri, pkg->filename, &uri);
 	
 	if (err != BASEURI_ERR_SUCCESS) {
