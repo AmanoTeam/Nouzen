@@ -884,6 +884,12 @@ int pkg_parse_section(
 	/* Filename */
 	if (repo->type == REPO_TYPE_APK) {
 		pkg->filename = malloc(
+			strlen(repo->release) + 
+			strlen(PATHSEP_POSIX_S) +
+			strlen(repo->resource) + 
+			strlen(PATHSEP_POSIX_S) +
+			strlen(repo->platform) + 
+			strlen(PATHSEP_POSIX_S) +
 			strlen(pkg->name) +
 			1 /* - */ +
 			strlen(pkg->version) +
@@ -896,7 +902,13 @@ int pkg_parse_section(
 			goto end;
 		}
 		
-		strcpy(pkg->filename, pkg->name);
+		strcpy(pkg->filename, repo->release);
+		strcat(pkg->filename, PATHSEP_POSIX_S);
+		strcat(pkg->filename, repo->resource);
+		strcat(pkg->filename, PATHSEP_POSIX_S);
+		strcat(pkg->filename, repo->platform);
+		strcat(pkg->filename, PATHSEP_POSIX_S);
+		strcat(pkg->filename, pkg->name);
 		strcat(pkg->filename, "-");
 		strcat(pkg->filename, pkg->version);
 		strcat(pkg->filename, ".apk");
@@ -1817,6 +1829,15 @@ int repolist_load(repolist_t* const list) {
 			}
 			
 			strcpy(repo.release, release);
+			
+			repo.platform = malloc(strlen(architecture) + 1);
+			
+			if (repo.platform == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(repo.platform, architecture);
 			
 			free(url);
 			
@@ -4189,6 +4210,9 @@ void repo_free(repo_t* const repo) {
 	
 	free(repo->release);
 	repo->release = NULL;
+	
+	free(repo->platform);
+	repo->platform = NULL;
 	
 	pkgs_free(&repo->pkgs, 1);
 	

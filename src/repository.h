@@ -5,6 +5,7 @@
 
 #include "package.h"
 #include "base_uri.h"
+#include "query.h"
 
 #define APT_MAX_PKG_INDEX_LEN ((1024 * 1024 * 100) + 1) /* 100 MiB */
 #define APT_MAX_PKG_SECTION_LEN ((1024 * 1024 * 1) + 1) /* 1 MiB */
@@ -20,15 +21,16 @@
 #define REPO_TYPE_APK (0x02)
 
 struct Repository {
+	int type;
 	size_t index;
 	char* name;
-	char* resource;
 	char* release;
+	char* resource;
+	char* platform;
 	architecture_t architecture;
 	pkgs_t pkgs;
 	base_uri_t uri;
 	base_uri_t base_uri;
-	int type;
 };
 
 typedef struct Repository repo_t;
