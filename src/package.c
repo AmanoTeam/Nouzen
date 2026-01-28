@@ -8,7 +8,11 @@
 #include "logging.h"
 #include "errors.h"
 
-static const char* PKG_SECTION_KEYS[] = {
+#define REPO_TYPE_UNKNOWN (0x00)
+#define REPO_TYPE_APT (0x01)
+#define REPO_TYPE_APK (0x02)
+
+static const char* APT_SECTION_KEYS[] = {
 	"Architecture",
 	"Breaks",
 	"Bugs",
@@ -67,20 +71,59 @@ static const char* PKG_SECTION_KEYS[] = {
 	"X-Cargo-Built-Using"
 };
 
-int pkg_key_matches(const char* const line) {
+static const char* APK_SECTION_KEYS[] = {
+	"C",
+	"P",
+	"V",
+	"A",
+	"S",
+	"I",
+	"T",
+	"U",
+	"L",
+	"o",
+	"m",
+	"t",
+	"c",
+	"D",
+	"p"
+};
+
+int pkg_key_matches(const int type, const char* const line) {
 	
 	size_t index = 0;
+	
 	size_t size = 0;
+	size_t offset = 0;
 	
 	int matches = 0;
 	
 	const char* key = NULL;
+	const char** items = NULL;
 	
-	for (index = 0; index < sizeof(PKG_SECTION_KEYS) / sizeof(*PKG_SECTION_KEYS); index++) {
-		key = PKG_SECTION_KEYS[index];
+	switch (type) {
+		case REPO_TYPE_APT: {
+			items = APT_SECTION_KEYS;
+			offset = sizeof(APT_SECTION_KEYS) / sizeof(*APT_SECTION_KEYS);
+			break;
+		}
+		case REPO_TYPE_APK: {
+			items = APK_SECTION_KEYS;
+			offset = sizeof(APK_SECTION_KEYS) / sizeof(*APK_SECTION_KEYS);
+			break;
+		}
+		default: {
+			items = NULL;
+			offset = 0;
+			break;
+		}
+	}
+	
+	for (index = 0; index < offset; index++) {
+		key = items[index];
 		size = strlen(key);
 		
-		matches = (strncmp(key, line, size) == 0);
+		matches = (strncmp(key, line, size) == 0 && line[size] == ':');
 		
 		if (!matches) {
 			continue;
@@ -93,19 +136,192 @@ int pkg_key_matches(const char* const line) {
 	
 }
 
+static const char* get_field_name(const int type, const int field) {
+	
+	switch (type) {
+		case REPO_TYPE_APT: {
+			switch (field) {
+				case PKG_SECTION_FIELD_NAME:
+					return "Package";
+				case PKG_SECTION_FIELD_VERSION:
+					return "Version";
+				case PKG_SECTION_FIELD_DESCRIPTION:
+					return "Description";
+				case PKG_SECTION_FIELD_DEPENDS:
+					return "Depends";
+				case PKG_SECTION_FIELD_PROVIDES:
+					return "Provides";
+				case PKG_SECTION_FIELD_RECOMMENDS:
+					return "Recommends";
+				case PKG_SECTION_FIELD_SUGGESTS:
+					return "Suggests";
+				case PKG_SECTION_FIELD_BREAKS:
+					return "Breaks";
+				case PKG_SECTION_FIELD_REPLACES:
+					return "Replaces";
+				case PKG_SECTION_FIELD_MAINTAINER:
+					return "Maintainer";
+				case PKG_SECTION_FIELD_HOMEPAGE:
+					return "Homepage";
+				case PKG_SECTION_FIELD_BUGS:
+					return "Bugs";
+				case PKG_SECTION_FIELD_SIZE:
+					return "Size";
+				case PKG_SECTION_FIELD_INSTALLED_SIZE:
+					return "Installed-Size";
+				case PKG_SECTION_FIELD_FILENAME:
+					return "Filename";
+			}
+			
+			break;
+		}
+		case REPO_TYPE_APK: {
+			switch (field) {
+				case PKG_SECTION_FIELD_NAME:
+					return "P";
+				case PKG_SECTION_FIELD_VERSION:
+					return "V";
+				case PKG_SECTION_FIELD_DESCRIPTION:
+					return "T";
+				case PKG_SECTION_FIELD_DEPENDS:
+					return "D";
+				case PKG_SECTION_FIELD_PROVIDES:
+					return "p";
+				case PKG_SECTION_FIELD_MAINTAINER:
+					return "m";
+				case PKG_SECTION_FIELD_HOMEPAGE:
+					return "U";
+				case PKG_SECTION_FIELD_SIZE:
+					return "S";
+				case PKG_SECTION_FIELD_INSTALLED_SIZE:
+					return "I";
+			}
+			
+			break;
+		}
+	}
+	
+	return NULL;
+	
+}
+
+static char* aptpkg_from_apkpkg(const char* const value) {
+	/*
+	Convert an APK-style package list into an APT-style package list.
+	*/
+	
+	const char* begin = NULL;
+	const char* end = NULL;
+	
+	char* ptr = NULL;
+	
+	unsigned char a = 0;
+	unsigned char b = 0;
+	
+	char sequence[3];
+	
+	char* result = NULL;
+	
+	strsplit_t split = {0};
+	strsplit_part_t part = {0};
+	
+	size_t size = 0;
+	
+	result = malloc(strlen(value) * 3);
+	
+	if (result == NULL) {
+		return result;
+	}
+	
+	result[0] = '\0';
+	
+	strsplit_init(&split, &part, value, " ");
+	
+	while (strsplit_next(&split, &part) != NULL) {
+		begin = part.begin;
+		end = (part.begin + part.size);
+		
+		a = result[0];
+		
+		if (a != '\0') {
+			strcat(result, ", ");
+		}
+		
+		while (1) {
+			a = *begin;
+			
+			if (a == '>' || a == '<' || a == '=') {
+				size = (begin - part.begin);
+				
+				strncat(result, part.begin, size);
+				
+				ptr = strchr(result, '\0');
+				
+				strcat(result, " (");
+				
+				/* Comparison operators */
+				sequence[1] = '\0';
+				sequence[2] = '\0';
+				
+				begin++;
+				b = *begin;
+				
+				sequence[0] = a;
+				
+				if ((a == '>' || a == '<') && b == '=') {
+					sequence[1] = b;
+					begin++;
+				}
+				
+				if (begin == end) {
+					*ptr = '\0';
+					break;
+				}
+				
+				strcat(result, sequence);
+				
+				/* Version */
+				strcat(result, " ");
+				
+				size = (end - begin);
+				strncat(result, begin, size);
+				
+				strcat(result, ")");
+				
+				break;
+			}
+			
+			if (begin == end) {
+				strncat(result, part.begin, part.size);
+				break;
+			}
+			
+			begin++;
+		}
+	}
+	
+	return result;
+	
+}
+
 int pkg_parse(
+	const int type,
 	hquery_t* const query,
 	pkg_t* const pkg
 ) {
 	
 	int err = APTERR_SUCCESS;
 	
+	const char* key = NULL;
 	const char* value = NULL;
+	
+	char* tmp = NULL;
 	
 	memset(pkg, 0, sizeof(*pkg));
 	
 	/* Package */
-	value = query_get_string(query, "Package");
+	key = get_field_name(type, PKG_SECTION_FIELD_NAME);
+	value = query_get_string(query, key);
 	
 	if (value == NULL) {
 		err = APTERR_PACKAGE_MISSING_NAME;
@@ -122,7 +338,8 @@ int pkg_parse(
 	strcpy(pkg->name, value);
 	
 	/* Description */
-	value = query_get_string(query, "Description");
+	key = get_field_name(type, PKG_SECTION_FIELD_DESCRIPTION);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->description = malloc(strlen(value) + 1);
@@ -136,7 +353,8 @@ int pkg_parse(
 	}
 	
 	/* Homepage */
-	value = query_get_string(query, "Homepage");
+	key = get_field_name(type, PKG_SECTION_FIELD_HOMEPAGE);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->homepage = malloc(strlen(value) + 1);
@@ -150,7 +368,8 @@ int pkg_parse(
 	}
 	
 	/* Bugs */
-	value = query_get_string(query, "Bugs");
+	key = get_field_name(type, PKG_SECTION_FIELD_BUGS);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->bugs = malloc(strlen(value) + 1);
@@ -164,7 +383,8 @@ int pkg_parse(
 	}
 	
 	/* Maintainer */
-	value = query_get_string(query, "Maintainer");
+	key = get_field_name(type, PKG_SECTION_FIELD_MAINTAINER);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->maintainer = malloc(strlen(value) + 1);
@@ -177,25 +397,9 @@ int pkg_parse(
 		strcpy(pkg->maintainer, value);
 	}
 	
-	/* Filename */
-	value = query_get_string(query, "Filename");
-	
-	if (value == NULL) {
-		err = APTERR_PACKAGE_MISSING_FILENAME;
-		goto end;
-	}
-	
-	pkg->filename = malloc(strlen(value) + 1);
-	
-	if (pkg->filename == NULL) {
-		err = APTERR_MEM_ALLOC_FAILURE;
-		goto end;
-	}
-	
-	strcpy(pkg->filename, value);
-	
 	/* Version */
-	value = query_get_string(query, "Version");
+	key = get_field_name(type, PKG_SECTION_FIELD_VERSION);
+	value = query_get_string(query, key);
 	
 	if (value == NULL) {
 		err = APTERR_PACKAGE_MISSING_VERSION;
@@ -211,22 +415,66 @@ int pkg_parse(
 	
 	strcpy(pkg->version, value);
 	
-	/* Provides */
-	value = query_get_string(query, "Provides");
-	
-	if (value != NULL) {
-		pkg->provides = malloc(strlen(value) + 1);
+	/* Filename */
+	if (type == REPO_TYPE_APK) {
+		pkg->filename = malloc(
+			strlen(pkg->name) +
+			1 /* - */ +
+			strlen(pkg->version) +
+			4 /* .apk */ +
+			 1
+		);
 		
-		if (pkg->provides == NULL) {
+		if (pkg->filename == NULL) {
 			err = APTERR_MEM_ALLOC_FAILURE;
 			goto end;
 		}
 		
-		strcpy(pkg->provides, value);
+		strcpy(pkg->filename, pkg->name);
+		strcat(pkg->filename, "-");
+		strcat(pkg->filename, pkg->version);
+		strcat(pkg->filename, ".apk");
+	} else {
+		key = get_field_name(type, PKG_SECTION_FIELD_FILENAME);
+		value = query_get_string(query, key);
+		
+		if (value == NULL) {
+			err = APTERR_PACKAGE_MISSING_FILENAME;
+			goto end;
+		}
+		
+		pkg->filename = malloc(strlen(value) + 1);
+		
+		if (pkg->filename == NULL) {
+			err = APTERR_MEM_ALLOC_FAILURE;
+			goto end;
+		}
+		
+		strcpy(pkg->filename, value);
+	}
+	
+	/* Provides */
+	key = get_field_name(type, PKG_SECTION_FIELD_PROVIDES);
+	value = query_get_string(query, key);
+	
+	if (value != NULL) {
+		if (type == REPO_TYPE_APK) {
+			pkg->provides = aptpkg_from_apkpkg(value);
+		} else {
+			pkg->provides = malloc(strlen(value) + 1);
+			
+			if (pkg->provides == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(pkg->provides, value);
+		}
 	}
 	
 	/* Suggests */
-	value = query_get_string(query, "Suggests");
+	key = get_field_name(type, PKG_SECTION_FIELD_SUGGESTS);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->suggests = malloc(strlen(value) + 1);
@@ -240,7 +488,8 @@ int pkg_parse(
 	}
 	
 	/* Recommends */
-	value = query_get_string(query, "Recommends");
+	key = get_field_name(type, PKG_SECTION_FIELD_RECOMMENDS);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->recommends = malloc(strlen(value) + 1);
@@ -254,21 +503,27 @@ int pkg_parse(
 	}
 	
 	/* Depends */
-	value = query_get_string(query, "Depends");
+	key = get_field_name(type, PKG_SECTION_FIELD_DEPENDS);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
-		pkg->depends = malloc(strlen(value) + 1);
-		
-		if (pkg->depends == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
+		if (type == REPO_TYPE_APK) {
+			pkg->depends = aptpkg_from_apkpkg(value);
+		} else {
+			pkg->depends = malloc(strlen(value) + 1);
+			
+			if (pkg->depends == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(pkg->depends, value);
 		}
-		
-		strcpy(pkg->depends, value);
 	}
 	
 	/* Breaks */
-	value = query_get_string(query, "Breaks");
+	key = get_field_name(type, PKG_SECTION_FIELD_BREAKS);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->breaks = malloc(strlen(value) + 1);
@@ -282,7 +537,8 @@ int pkg_parse(
 	}
 	
 	/* Replaces */
-	value = query_get_string(query, "Replaces");
+	key = get_field_name(type, PKG_SECTION_FIELD_REPLACES);
+	value = query_get_string(query, key);
 	
 	if (value != NULL) {
 		pkg->replaces = malloc(strlen(value) + 1);
@@ -296,9 +552,11 @@ int pkg_parse(
 	}
 	
 	/* Size */
-	pkg->size = query_get_uint(query, "Size");
+	key = get_field_name(type, PKG_SECTION_FIELD_SIZE);
+	pkg->size = query_get_uint(query, key);
 	
 	/* Installed-Size */
+	key = get_field_name(type, PKG_SECTION_FIELD_INSTALLED_SIZE);
 	pkg->installed_size = query_get_uint(query, "Installed-Size");
 	
 	if (pkg->installed_size != 0) {

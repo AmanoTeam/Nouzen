@@ -674,7 +674,7 @@ int repo_load_string(
 			goto end;
 		}
 	}
-	puts(index_file);
+	
 	if (format != GUESS_FILE_FORMAT_SOMETHING_ELSE) {
 		loggln(
 			LOG_VERBOSE,
@@ -688,7 +688,7 @@ int repo_load_string(
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Open package index file from '%s'", index_file);
+		loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", index_file);
 		
 		stream = fstream_open(index_file, FSTREAM_READ);
 		
@@ -774,7 +774,7 @@ int repo_load_string(
 				goto end;
 			}
 			
-			err = pkg_parse(&query, &pkg);
+			err = pkg_parse(repo->type, &query, &pkg);
 			
 			if (err != APTERR_SUCCESS) {
 				goto end;
@@ -796,7 +796,7 @@ int repo_load_string(
 			continue;
 		}
 		
-		if (*section != '\0' && pkg_key_matches(part.begin)) {
+		if (*section != '\0' && pkg_key_matches(repo->type, part.begin)) {
 			strcat(section, "\n");
 		}
 		
@@ -809,7 +809,7 @@ int repo_load_string(
 	
 	end:;
 	
-	//remove_directory_contents(temporary_directory);
+	remove_directory_contents(temporary_directory);
 	
 	query_free(&query);
 	free(section);
