@@ -670,7 +670,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 	Convert an APK-style (Alpine) package list into an APT-style package list.
 	*/
 	
-	const char* begin = NULL;
+	char* begin = NULL;
 	const char* end = NULL;
 	
 	char* ptr = NULL;
