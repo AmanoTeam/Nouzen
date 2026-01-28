@@ -205,7 +205,7 @@ static const char* get_field_name(const int type, const int field) {
 	
 }
 
-static char* aptpkg_from_apkpkg(const char* const value) {
+static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 	/*
 	Convert an APK-style package list into an APT-style package list.
 	*/
@@ -259,6 +259,11 @@ static char* aptpkg_from_apkpkg(const char* const value) {
 				size = (begin - part.begin);
 				
 				strncat(result, part.begin, size);
+				
+				if (field == PKG_SECTION_FIELD_PROVIDES) {
+					/* APT's "Provides" field have no versioning info attached to the package names. */
+					break;
+				}
 				
 				ptr = strchr(result, '\0');
 				
@@ -462,7 +467,7 @@ int pkg_parse(
 	
 	if (value != NULL) {
 		if (type == REPO_TYPE_APK) {
-			pkg->provides = aptpkg_from_apkpkg(value);
+			pkg->provides = aptpkg_from_apkpkg(PKG_SECTION_FIELD_PROVIDES, value);
 		} else {
 			pkg->provides = malloc(strlen(value) + 1);
 			
@@ -511,7 +516,7 @@ int pkg_parse(
 	
 	if (value != NULL) {
 		if (type == REPO_TYPE_APK) {
-			pkg->depends = aptpkg_from_apkpkg(value);
+			pkg->depends = aptpkg_from_apkpkg(PKG_SECTION_FIELD_DEPENDS, value);
 		} else {
 			pkg->depends = malloc(strlen(value) + 1);
 			
