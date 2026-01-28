@@ -421,6 +421,8 @@ static int repolist_perform_show(repolist_t* const repolist, const char* const q
 	btos(pkg->size, package_size);
 	printf("Download-Size: %s\r\n", package_size);
 	
+	printf("Filename: %s\r\n", (char*) pkg->filename);
+	
 	printf("APT-Manual-Installed: %s\r\n", ((pkg->autoinstall) ? "no": "yes"));
 	
 	key = repoarch_unstringify(pkg->arch);
