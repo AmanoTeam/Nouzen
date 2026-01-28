@@ -8,6 +8,10 @@
 #include "logging.h"
 #include "errors.h"
 
+#define REPO_TYPE_UNKNOWN (0x00)
+#define REPO_TYPE_APT (0x01)
+#define REPO_TYPE_APK (0x02)
+
 static const char* APT_SECTION_KEYS[] = {
 	"Architecture",
 	"Breaks",
