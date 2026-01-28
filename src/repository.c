@@ -3948,7 +3948,7 @@ int repolist_install_single_package(
 	
 	for (index = 0; index < entries.offset; index++) {
 		entry = entries.items[index];
-		
+		puts(entry);
 		if (strncmp("./", entry, 2) == 0) {
 			entry += 2;
 		}
