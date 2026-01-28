@@ -687,6 +687,8 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 	
 	size_t size = 0;
 	
+	(void) field;
+	
 	result = malloc(strlen(value) * 3);
 	
 	if (result == NULL) {
@@ -719,11 +721,6 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 				size = (begin - part.begin);
 				
 				strncat(result, part.begin, size);
-				
-				if (0 &&field == PKG_SECTION_FIELD_PROVIDES) {
-					/* APT's "Provides" field have no versioning info attached to the package names. */
-					break;
-				}
 				
 				ptr = strchr(result, '\0');
 				
@@ -2074,6 +2071,7 @@ pkg_t* pkgs_get_virt_pkg(
 		strsplit_init(&split, &part, pkg->provides, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
+			printf("%.*s\n", size, part.begin);
 			if (strncmp(name, part.begin, size) != 0) {
 				continue;
 			}
