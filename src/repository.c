@@ -1460,7 +1460,7 @@ int repolist_load(repolist_t* const list) {
 				strcpy(match, file_extension);
 				
 				repo.index = repo_index;
-				err = repo_load(&repo, url, repository, options->cache);
+				err = repo_load(&repo, url, url, options->cache);
 				
 				if (err == APTERR_WCURL_REQUEST_FAILURE) {
 					continue;
