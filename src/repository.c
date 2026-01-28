@@ -700,7 +700,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 	strsplit_init(&split, &part, value, " ");
 	
 	while (strsplit_next(&split, &part) != NULL) {
-		begin = part.begin;
+		begin = (char*) part.begin;
 		end = (part.begin + part.size);
 		
 		a = result[0];
@@ -718,7 +718,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 					continue;
 				}
 				
-				*begin = '-';
+				*begin = '|';
 			}
 			
 			if (a == '>' || a == '<' || a == '=') {
