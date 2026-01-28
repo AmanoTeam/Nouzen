@@ -410,6 +410,10 @@ static int repolist_perform_show(repolist_t* const repolist, const char* const q
 		printf("\r\n");
 	}
 	
+	if (pkg->provides != NULL) {
+		printf("Provides: %s\r\n", pkg->provides);
+	}
+	
 	if (pkg->homepage != NULL) {
 		printf("Homepage: %s\r\n", pkg->homepage);
 	}
