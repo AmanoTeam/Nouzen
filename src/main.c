@@ -344,7 +344,7 @@ static int repolist_perform_show(repolist_t* const repolist, const char* const q
 		err = APTERR_PACKAGE_SEARCH_NO_MATCHES;
 		goto end;
 	}
-	
+	puts(pkg->depends);
 	err = repolist_resolve_deps(repolist, pkg);
 	
 	if (err != APTERR_SUCCESS) {

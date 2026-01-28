@@ -315,8 +315,6 @@ int pkg_parse(
 	const char* key = NULL;
 	const char* value = NULL;
 	
-	char* tmp = NULL;
-	
 	memset(pkg, 0, sizeof(*pkg));
 	
 	/* Package */
