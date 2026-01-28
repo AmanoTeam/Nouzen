@@ -558,6 +558,10 @@ int pkg_parse(
 	key = get_field_name(type, PKG_SECTION_FIELD_SIZE);
 	pkg->size = query_get_uint(query, key);
 	
+	if (pkg->installed_size != 0 && type == REPO_TYPE_APK) {
+		pkg->size = pkg->size * 1000;
+	}
+	
 	/* Installed-Size */
 	key = get_field_name(type, PKG_SECTION_FIELD_INSTALLED_SIZE);
 	pkg->installed_size = query_get_uint(query, key);
