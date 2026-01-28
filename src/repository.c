@@ -2063,7 +2063,11 @@ pkg_t* pkgs_get_virt_pkg(
 	strsplit_t split = {0};
 	strsplit_part_t part = {0};
 	
-	size = strlen(name) + 1;
+	int matches = 0;
+	
+	const char* end = NULL;
+	
+	size = strlen(name);
 	
 	for (index = 0; index < pkgs->offset; index++) {
 		pkg = pkgs->items[index];
@@ -2071,8 +2075,9 @@ pkg_t* pkgs_get_virt_pkg(
 		strsplit_init(&split, &part, pkg->provides, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
-			printf("%.*s\n", (int) part.size, part.begin);
-			if (strncmp(name, part.begin, size) != 0) {
+			matches = strncmp(name, part.begin, size) == 0 && size == part.size;
+			//printf("%.*s\n", (int) part.size, part.begin);
+			if (!matches) {
 				continue;
 			}
 			
