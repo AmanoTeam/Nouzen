@@ -712,7 +712,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 		while (1) {
 			a = *begin;
 			
-			if (a == ':'} {
+			if (a == ':') {
 				if (strncmp("cmd:", part.begin, 4) == 0 || strncmp("so:", part.begin, 3) == 0) {
 					part.begin = ++begin;
 					continue;
