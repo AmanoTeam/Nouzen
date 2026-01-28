@@ -720,7 +720,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 				
 				strncat(result, part.begin, size);
 				
-				if (field == PKG_SECTION_FIELD_PROVIDES) {
+				if (0 &&field == PKG_SECTION_FIELD_PROVIDES) {
 					/* APT's "Provides" field have no versioning info attached to the package names. */
 					break;
 				}

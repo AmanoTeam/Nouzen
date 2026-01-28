@@ -425,9 +425,7 @@ static int repolist_perform_show(repolist_t* const repolist, const char* const q
 	
 	printf("APT-Manual-Installed: %s\r\n", ((pkg->autoinstall) ? "no": "yes"));
 	
-	key = repoarch_unstringify(pkg->arch);
-	
-	printf("APT-Sources: %s %s/%s %s Packages\r\n", repo->base_uri.value, repo->release, repo->resource, key);
+	printf("APT-Sources: %s %s/%s %s Packages\r\n", repo->base_uri.value, repo->release, repo->resource, repo->platform);
 	
 	if (pkg->description != NULL) {
 		printf("Description: %s\r\n", pkg->description);
