@@ -560,7 +560,7 @@ int pkg_parse(
 	
 	/* Installed-Size */
 	key = get_field_name(type, PKG_SECTION_FIELD_INSTALLED_SIZE);
-	pkg->installed_size = query_get_uint(query, "Installed-Size");
+	pkg->installed_size = query_get_uint(query, key);
 	
 	if (pkg->installed_size != 0) {
 		pkg->installed_size = pkg->installed_size * 1000;
