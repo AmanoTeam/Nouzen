@@ -1889,8 +1889,7 @@ int repolist_resolve_related(
 			destination = &pkg->recommends;
 			break;
 	}
-	puts("x");
-	puts(value);
+	
 	strsplit_init(&split, &part, value, ",");
 	
 	while (1) {

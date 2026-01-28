@@ -250,6 +250,11 @@ static char* aptpkg_from_apkpkg(const char* const value) {
 		while (1) {
 			a = *begin;
 			
+			if (a == ':') {
+				part.begin = ++begin;
+				continue;
+			}
+			
 			if (a == '>' || a == '<' || a == '=') {
 				size = (begin - part.begin);
 				
