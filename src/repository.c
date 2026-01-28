@@ -2071,7 +2071,7 @@ pkg_t* pkgs_get_virt_pkg(
 		strsplit_init(&split, &part, pkg->provides, ",");
 		
 		while (pkglist_split_next(&split, &part) != NULL) {
-			printf("%.*s\n", size, part.begin);
+			printf("%.*s\n", (int) part.size, part.begin);
 			if (strncmp(name, part.begin, size) != 0) {
 				continue;
 			}
