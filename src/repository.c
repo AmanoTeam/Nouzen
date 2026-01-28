@@ -718,7 +718,7 @@ static char* aptpkg_from_apkpkg(const int field, const char* const value) {
 					continue;
 				}
 				
-				*begin = '|';
+				*begin = '-';
 			}
 			
 			if (a == '>' || a == '<' || a == '=') {
@@ -3600,6 +3600,8 @@ int repolist_install_single_package(
 	
 	ssize_t status = 0;
 	
+	repo_t* repo = NULL;
+	
 	char* command = NULL;
 	
 	const char* version = NULL;
@@ -3628,6 +3630,8 @@ int repolist_install_single_package(
 	patchelf_t* patchelf = NULL;
 	
 	char chunk[4];
+	
+	repo = repolist_get_pkg_repo(list, pkg);
 	
 	installation = &pkg->installation;
 	query = &installation->metadata;
@@ -3679,11 +3683,6 @@ int repolist_install_single_package(
 		}
 	}
 	
-	if (set_current_directory(temporary_directory) != 0) {
-		err = APTERR_FS_CHDIR_FAILURE;
-		goto end;
-	}
-	
 	logg(LOG_STANDARD, "Unpacking %s (%s)", pkg->name, pkg->version);
 	
 	if (pkg->upgradable) {
@@ -3693,37 +3692,44 @@ int repolist_install_single_package(
 	
 	loggln(LOG_STANDARD, " ...");
 	
-	loggln(LOG_VERBOSE, "Unpacking '%s' to '%s'", pkg->filename, temporary_directory);
-	
-	err = uncompress(pkg->filename, 0, NULL, NULL, NULL);
-	
-	if (err != 0) {
-		err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
-		goto end;
-	}
-	
-	err = remove_file(pkg->filename);
-	
-	if (err != 0) {
-		err = APTERR_FS_RM_FAILURE;
-		goto end;
-	}
-	
-	free(filename);
-	filename = find_file(temporary_directory, "control");
-	
-	if (filename == NULL) {
-		err = APTERR_PKG_DATA_FILE_MISSING;
-		goto end;
-	}
-	
-	loggln(LOG_VERBOSE, "Found control file at '%s'", filename);
-	
-	err = uncompress(filename, 0, NULL, NULL, NULL);
-	
-	if (err != 0) {
-		err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
-		goto end;
+	if (repo->type == REPO_TYPE_APT) {
+		if (set_current_directory(temporary_directory) != 0) {
+			err = APTERR_FS_CHDIR_FAILURE;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Unpacking '%s' to '%s'", pkg->filename, temporary_directory);
+		
+		err = uncompress(pkg->filename, 0, NULL, NULL, NULL);
+		
+		if (err != 0) {
+			err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
+			goto end;
+		}
+		
+		err = remove_file(pkg->filename);
+		
+		if (err != 0) {
+			err = APTERR_FS_RM_FAILURE;
+			goto end;
+		}
+		
+		free(filename);
+		filename = find_file(temporary_directory, "control");
+		
+		if (filename == NULL) {
+			err = APTERR_PKG_CONTROL_FILE_MISSING;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Found control file at '%s'", filename);
+		
+		err = uncompress(filename, 0, NULL, NULL, NULL);
+		
+		if (err != 0) {
+			err = APTERR_ARCHIVE_UNCOMPRESS_FAILURE;
+			goto end;
+		}
 	}
 	
 	if (set_current_directory(options->prefix) != 0) {
@@ -3731,64 +3737,86 @@ int repolist_install_single_package(
 		goto end;
 	}
 	
-	free(filename);
-	filename = find_file(temporary_directory, "preinst");
-	
-	if (options->maintainer_scripts && filename != NULL) {
-		loggln(LOG_VERBOSE, "Found pre-install script at '%s'", filename);
-		
-		free(command);
-		
-		if (pkg->upgradable) {
-			command = malloc(
-				strlen(filename) + 1 +
-				strlen(KUPGRADE) + 1 +
-				strlen(version) + 1 +
-				strlen(pkg->version) + 1
-			);
+	switch (repo->type) {
+		case REPO_TYPE_APT: {
+			free(filename);
+			filename = find_file(temporary_directory, "preinst");
 			
-			if (command == NULL) {
-				err = APTERR_MEM_ALLOC_FAILURE;
+			if (options->maintainer_scripts && filename != NULL) {
+				loggln(LOG_VERBOSE, "Found pre-install script at '%s'", filename);
+				
+				free(command);
+				
+				if (pkg->upgradable) {
+					command = malloc(
+						strlen(filename) + 1 +
+						strlen(KUPGRADE) + 1 +
+						strlen(version) + 1 +
+						strlen(pkg->version) + 1
+					);
+					
+					if (command == NULL) {
+						err = APTERR_MEM_ALLOC_FAILURE;
+						goto end;
+					}
+					
+					strcpy(command, filename);
+					strcat(command, " ");
+					strcat(command, KUPGRADE);
+					strcat(command, " ");
+					strcat(command, version);
+					strcat(command, " ");
+					strcat(command, pkg->version);
+				} else {
+					command = malloc(
+						strlen(filename) + 1 +
+						strlen(KINSTALL) + 1
+					);
+					
+					if (command == NULL) {
+						err = APTERR_MEM_ALLOC_FAILURE;
+						goto end;
+					}
+					
+					strcpy(command, filename);
+					strcat(command, " ");
+					strcat(command, KINSTALL);
+				}
+				
+				loggln(LOG_VERBOSE, "Execute subprocess: '%s'", command);
+				
+				execute_shell_command(command);
+			}
+			
+			free(filename);
+			filename = find_file(temporary_directory, "data");
+			
+			if (filename == NULL) {
+				err = APTERR_PKG_DATA_FILE_MISSING;
 				goto end;
 			}
 			
-			strcpy(command, filename);
-			strcat(command, " ");
-			strcat(command, KUPGRADE);
-			strcat(command, " ");
-			strcat(command, version);
-			strcat(command, " ");
-			strcat(command, pkg->version);
-		} else {
-			command = malloc(
-				strlen(filename) + 1 +
-				strlen(KINSTALL) + 1
-			);
+			loggln(LOG_VERBOSE, "Found data file at '%s'", filename);
 			
-			if (command == NULL) {
-				err = APTERR_MEM_ALLOC_FAILURE;
-				goto end;
-			}
-			
-			strcpy(command, filename);
-			strcat(command, " ");
-			strcat(command, KINSTALL);
+			break;
 		}
-		
-		loggln(LOG_VERBOSE, "Execute subprocess: '%s'", command);
-		
-		execute_shell_command(command);
+		case REPO_TYPE_APK: {
+			filename = malloc(strlen(pkg->filename) + 1);
+			
+			if (filename == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(filename, pkg->filename);
+			
+			break;
+		}
+		default: {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
+			goto end;
+		}
 	}
-	
-	free(filename);
-	filename = find_file(temporary_directory, "data");
-	
-	if (filename == NULL) {
-		err = APTERR_PKG_DATA_FILE_MISSING;
-		goto end;
-	}
-	
-	loggln(LOG_VERBOSE, "Found data file at '%s'", filename);
 	
 	loggln(LOG_VERBOSE, "Unpacking package files from '%s' to '%s'", filename, options->prefix);
 	
@@ -3801,37 +3829,50 @@ int repolist_install_single_package(
 	
 	loggln(LOG_STANDARD, "Setting up %s (%s) ...", pkg->name, pkg->version);
 	
-	free(filename);
-	filename = find_file(temporary_directory, "postinst");
-	
-	if (options->maintainer_scripts && filename != NULL) {
-		loggln(LOG_VERBOSE, "Found post-install script at '%s'", filename);
-		
-		free(command);
-		
-		command = malloc(
-			strlen(filename) + 1 +
-			strlen(KCONFIGURE) + 1 +
-			((version == NULL) ? 0 : strlen(version)) + 1
-		);
-		
-		if (command == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
+	switch (repo->type) {
+		case REPO_TYPE_APT: {
+			free(filename);
+			filename = find_file(temporary_directory, "postinst");
+			
+			if (options->maintainer_scripts && filename != NULL) {
+				loggln(LOG_VERBOSE, "Found post-install script at '%s'", filename);
+				
+				free(command);
+				
+				command = malloc(
+					strlen(filename) + 1 +
+					strlen(KCONFIGURE) + 1 +
+					((version == NULL) ? 0 : strlen(version)) + 1
+				);
+				
+				if (command == NULL) {
+					err = APTERR_MEM_ALLOC_FAILURE;
+					goto end;
+				}
+				
+				strcpy(command, filename);
+				strcat(command, " ");
+				strcat(command, KCONFIGURE);
+				
+				if (version != NULL) {
+					strcat(command, " ");
+					strcat(command, version);
+				}
+				
+				loggln(LOG_VERBOSE, "Execute subprocess: '%s'", command);
+				
+				execute_shell_command(command);
+			}
+			
+			break;
+		}
+		case REPO_TYPE_APK: {
+			break;
+		}
+		default: {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
 			goto end;
 		}
-		
-		strcpy(command, filename);
-		strcat(command, " ");
-		strcat(command, KCONFIGURE);
-		
-		if (version != NULL) {
-			strcat(command, " ");
-			strcat(command, version);
-		}
-		
-		loggln(LOG_VERBOSE, "Execute subprocess: '%s'", command);
-		
-		execute_shell_command(command);
 	}
 	
 	loggln(LOG_VERBOSE, "Deleting temporary files from '%s'", temporary_directory);
