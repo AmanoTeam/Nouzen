@@ -688,6 +688,8 @@ int main(int argc, argv_t* argv[]) {
 	
 	end:;
 	
+	erase_line();
+	
 	if (err != APTERR_SUCCESS && err != APTERR_CLI_USER_INTERRUPTED) {
 		fprintf(stderr, "fatal error: (%i) %s", -err, apterr_getmessage(err));
 		

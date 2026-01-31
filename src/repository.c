@@ -6,7 +6,6 @@
 
 #include "ask.h"
 #include "buffer.h"
-#include "term/keyboard.h"
 #include "downloader.h"
 #include "errors.h"
 #include "format.h"
@@ -14,35 +13,33 @@
 #include "fs/basename.h"
 #include "fs/chdir.h"
 #include "fs/exists.h"
+#include "fs/fstream.h"
 #include "fs/getexec.h"
 #include "fs/mkdir.h"
-#include "fs/chmod.h"
 #include "fs/realpath.h"
 #include "fs/rm.h"
 #include "fs/sep.h"
-#include "fs/symlink.h"
 #include "fs/splitext.h"
-#include "fs/fstream.h"
+#include "fs/symlink.h"
+#include "fs/walkdir.h"
 #include "guess_file_format.h"
 #include "guess_uri.h"
 #include "logging.h"
 #include "nouzen.h"
 #include "options.h"
 #include "os/envdir.h"
-#include "os/shell.h"
 #include "os/osdetect.h"
+#include "os/shell.h"
 #include "package.h"
 #include "pprint.h"
 #include "progress_callback.h"
 #include "query.h"
 #include "repository.h"
 #include "strsplit.h"
+#include "term/keyboard.h"
 #include "term/screen.h"
 #include "uncompress.h"
-#include "fs/walkdir.h"
 #include "wcurl.h"
-#include "wildcard_match.h"
-#include "wpatchelf.h"
 #include "write_callback.h"
 
 static const char ETC_DIRECTORY[] = 
@@ -1897,8 +1894,8 @@ int repolist_load(repolist_t* const list) {
 		
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
 		
-		/* Type */
-		value = query_get_string(&query, "type");
+		/* Format */
+		value = query_get_string(&query, "format");
 		
 		if (value == NULL) {
 			err = APTERR_REPO_CONF_MISSING_FIELD;
@@ -3766,7 +3763,6 @@ int repolist_install_single_package(
 	const walkdir_item_t* item = NULL;
 	
 	fstream_t* stream = NULL;
-	patchelf_t* patchelf = NULL;
 	
 	char chunk[4];
 	
@@ -4023,15 +4019,6 @@ int repolist_install_single_package(
 		goto end;
 	}
 	
-	if (options->patchelf) {
-		patchelf = patchelf_init();
-		
-		if (patchelf == NULL) {
-			err = APTERR_PATCHELF_INIT_FAILURE;
-			goto end;
-		}
-	}
-	
 	for (index = 0; index < entries.offset; index++) {
 		entry = entries.items[index];
 		size += strlen(entry) + 1;
@@ -4096,188 +4083,48 @@ int repolist_install_single_package(
 			continue;
 		}
 		
-		/* Rewrite symbolic links that points to an absolute path */
-		if (symlink_exists(entry) == 1) {
-			free(filename);
-			filename = get_symlink(entry);
-			
-			if (filename == NULL) {
-				err = APTERR_FS_READLINK_FAILURE;
-				goto end;
-			}
-			
-			if (isabsolute(filename)) {
-				loggln(LOG_VERBOSE, "Removing hardcoded symlink at '%s'", entry);
-				
-				if (remove_file(entry) != 0) {
-					err = APTERR_FS_RM_FAILURE;
-					goto end;
-				}
-				
-				src = malloc(strlen(options->prefix) + strlen(filename) + 1);
-				
-				if (src == NULL) {
-					err = APTERR_MEM_ALLOC_FAILURE;
-					goto end;
-				}
-				
-				strcpy(src, options->prefix);
-				strcat(src, filename);
-				
-				free(filename);
-				filename = src;
-				
-				loggln(LOG_VERBOSE, "Symlinking '%s' to '%s'", filename, entry);
-				
-				if (mklink(filename, entry) != 0) {
-					err = APTERR_FS_SYMLINK_FAILURE;
-					goto end;
-				}
-			}
-		}
-		
-		if (patchelf == NULL) {
-			continue;
-		}
-		
-		b = basename(entry);
-		
-		/* We should avoid patching the dynamic linker */
-		if (strcmp(a, b) == 0) {
-			continue;
-		}
-		
-		if (wildcard_match("ld-2.*.so", b)) {
-			continue;
-		}
-		
-		/* This is a static executable on older versions of Debian */
-		if (strcmp(b, "ldconfig") == 0) {
+		if (symlink_exists(entry) != 1) {
 			continue;
 		}
 		
 		free(filename);
-		fstream_close(stream);
-		
-		filename = malloc(strlen(options->prefix) + strlen(PATHSEP_S) + strlen(entry) + 1);
+		filename = get_symlink(entry);
 		
 		if (filename == NULL) {
+			err = APTERR_FS_READLINK_FAILURE;
+			goto end;
+		}
+		
+		if (!isabsolute(filename)) {
+			continue;
+		}
+		
+		loggln(LOG_VERBOSE, "Removing hardcoded symlink at '%s'", entry);
+		
+		if (remove_file(entry) != 0) {
+			err = APTERR_FS_RM_FAILURE;
+			goto end;
+		}
+		
+		src = malloc(strlen(options->prefix) + strlen(filename) + 1);
+		
+		if (src == NULL) {
 			err = APTERR_MEM_ALLOC_FAILURE;
 			goto end;
 		}
 		
-		strcpy(filename, options->prefix);
-		strcat(filename, PATHSEP_S);
-		strcat(filename, entry);
-		
-		stream = fstream_open(filename, FSTREAM_READ);
-		
-		if (stream == NULL) {
-			continue;
-		}
-		
-		status = fstream_read(stream, chunk, sizeof(chunk));
-		
-		if (status != sizeof(chunk)) {
-			continue;
-		}
-		
-		if (memcmp(chunk, ELF_MAGIC_NUMBERS, sizeof(ELF_MAGIC_NUMBERS)) != 0) {
-			continue;
-		}
-		
-		file_extension = splitext_get(entry);
-		
-		if (file_extension != NULL && (strcmp(file_extension, "o") == 0 || strcmp(file_extension, "a") == 0)) {
-			continue;
-		}
-		
-		status = chmod_getmode(filename);
-		
-		if (status == -1) {
-			err = APTERR_FS_GTMOD_FAILURE;
-			goto end;
-		}
-		
-		if ((status & CHMOD_USER_WRITE) == 0) {
-			status = chmod_setmode(filename, CHMOD_USER_WRITE);
-			
-			if (status != 0) {
-				err = APTERR_FS_CHMOD_FAILURE;
-				goto end;
-			}
-		}
-		
-		patchelf_add_file(patchelf, filename);
-	}
-	
-	if (patchelf != NULL) {
-		for (index = 0; index < sizeof(SYSTEM_LIBRARY_PATH) / sizeof(*SYSTEM_LIBRARY_PATH); index++) {
-			entry = SYSTEM_LIBRARY_PATH[index];
-			
-			free(filename);
-			filename = malloc(strlen(options->prefix) + strlen(PATHSEP_S) + strlen(entry) + 1);
-			
-			if (filename == NULL) {
-				err = APTERR_MEM_ALLOC_FAILURE;
-				goto end;
-			}
-			
-			strcpy(filename, options->prefix);
-			strcat(filename, PATHSEP_S);
-			strcat(filename, entry);
-			
-			patchelf_add_rpath(patchelf, filename);
-		}
-		
-		entry = PATHSEP_M "usr" PATHSEP_M "lib" PATHSEP_M;
+		strcpy(src, options->prefix);
+		strcat(src, filename);
 		
 		free(filename);
-		filename = malloc(strlen(options->prefix) + strlen(entry) + strlen(triplet) + 1);
+		filename = src;
 		
-		if (filename == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
+		loggln(LOG_VERBOSE, "Symlinking '%s' to '%s'", filename, entry);
+		
+		if (mklink(filename, entry) != 0) {
+			err = APTERR_FS_SYMLINK_FAILURE;
 			goto end;
 		}
-		
-		/* /usr/lib/<triplet> */
-		strcpy(filename, options->prefix);
-		strcat(filename, entry);
-		strcat(filename, triplet);
-		
-		patchelf_add_rpath(patchelf, filename);
-		
-		/* /lib/<triplet> */
-		strcpy(filename, options->prefix);
-		strcat(filename, entry + 4);
-		strcat(filename, triplet);
-		
-		patchelf_add_rpath(patchelf, filename);
-		
-		loggln(LOG_STANDARD, "Patching %s (%s) ...", pkg->name, pkg->version);
-		
-		free(filename);
-		filename = malloc(strlen(options->prefix) + 4 + strlen(PATHSEP_S) + strlen(loader) + 1);
-		
-		if (filename == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		strcpy(filename, options->prefix);
-		strcat(filename, PATHSEP_M "usr");
-		strcat(filename, PATHSEP_S);
-		strcat(filename, loader);
-		
-		if (file_exists(filename) != 1) {
-			strcpy(filename, options->prefix);
-			strcat(filename, PATHSEP_S);
-			strcat(filename, loader);
-		}
-		
-		patchelf_set_interpreter(patchelf, filename);
-		patchelf_force_rpath(patchelf, 1);
-		patchelf_perform(patchelf);
 	}
 	
 	if (options->symlink_prefix != NULL && directory_exists(options->symlink_prefix) == 1) {
@@ -4378,8 +4225,6 @@ int repolist_install_single_package(
 	archive_entries_free(&entries);
 	
 	fstream_close(stream);
-	
-	patchelf_free(patchelf);
 	
 	walkdir_free(&walkdir);
 	

@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#if !defined(_WIN32)
+	#include <sys/types.h>
+#endif
+
 #include "package.h"
 #include "base_uri.h"
 #include "query.h"

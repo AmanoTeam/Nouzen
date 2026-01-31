@@ -22,9 +22,6 @@
 [submodule "submodules/zstd"]
 	path = submodules/zstd
 	url = https://github.com/facebook/zstd
-[submodule "submodules/patchelf"]
-	path = submodules/patchelf
-	url = https://github.com/NixOS/patchelf
 [submodule "submodules/bzip2"]
 	path = submodules/bzip2
 	url = https://gitlab.com/federicomenaquintero/bzip2

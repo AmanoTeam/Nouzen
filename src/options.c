@@ -21,7 +21,6 @@ static const char KOPT_FORCE_REFRESH[] = "force-refresh";
 static const char KOPT_PREFIX[] = "prefix";
 static const char KOPT_LOGLEVEL[] = "loglevel";
 static const char KOPT_SKIP_MAINTAINER_SCRIPTS[] = "skip-maintainer-scripts";
-static const char KOPT_ENABLE_PATCHELF[] = "enable-patchelf";
 static const char KOPT_SYMLINK_PREFIX[] = "symlink-prefix";
 
 static const char VPREFIX[] = "$ORIGIN" PATHSEP_M "sysroot";
@@ -31,7 +30,6 @@ static const biguint_t VCACHE = 1;
 static const biguint_t VFORCE_REFRESH = 0;
 static const biguint_t VPARALLELISM = 0;
 static const biguint_t VSKIP_MAINTAINER_SCRIPTS = 1;
-static const biguint_t VENABLE_PATCHELF = 0;
 
 static const char OPTIONS_FILE[] = "options.conf";
 static const char DOLLAR_SIGN = '$';
@@ -121,13 +119,6 @@ int options_load(
 		}
 		
 		err = query_add_uint(&query, KOPT_SKIP_MAINTAINER_SCRIPTS, VSKIP_MAINTAINER_SCRIPTS);
-		
-		if (err != 0) {
-			err = APTERR_PKG_METADATA_WRITE_FAILURE;
-			goto end;
-		}
-		
-		err = query_add_uint(&query, KOPT_ENABLE_PATCHELF, VENABLE_PATCHELF);
 		
 		if (err != 0) {
 			err = APTERR_PKG_METADATA_WRITE_FAILURE;
@@ -268,15 +259,6 @@ int options_load(
 	
 	if (status != -1) {
 		options.maintainer_scripts = !status;
-	}
-	
-	options.patchelf = VENABLE_PATCHELF;
-	
-	/* Enable patchelf */
-	status = query_get_bool(&query, KOPT_ENABLE_PATCHELF);
-	
-	if (status != -1) {
-		options.patchelf = status;
 	}
 	
 	options.concurrency = VPARALLELISM;

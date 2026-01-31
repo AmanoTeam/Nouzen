@@ -6,7 +6,7 @@
 	#include <libloaderapi.h>
 #endif
 
-#if defined(__linux__)
+#if !defined(_WIN32)
 	#include "fs/fstream.h"
 	#include "query.h"
 #endif

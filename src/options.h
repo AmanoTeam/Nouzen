@@ -7,7 +7,6 @@ struct Options {
 	int cache;
 	int assume_yes;
 	int maintainer_scripts;
-	int patchelf;
 	biguint_t concurrency;
 };
 

@@ -44,7 +44,6 @@ set(LIBARCHIVE_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/libarchive")
 set(XZ_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/xz-utils")
 set(ZLIB_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/zlib")
 set(ZSTD_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/zstd")
-set(PATCHELF_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/patchelf")
 set(BZIP2_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/bzip2")
 
 set(
@@ -414,7 +413,6 @@ set(
 	liblzma
 	zlib
 	archive
-	patchelf
 	nghttp2
 	bz2
 )
@@ -514,11 +512,6 @@ file(READ "${BZIP2_SOURCE_DIRECTORY}/CMakeLists.txt" FILE_CONTENTS)
 string(REPLACE "Python3_FOUND" "0" FILE_CONTENTS "${FILE_CONTENTS}") 
 file(WRITE "${BZIP2_SOURCE_DIRECTORY}/CMakeLists.txt" "${FILE_CONTENTS}") 
 
-file(READ "${PATCHELF_SOURCE_DIRECTORY}/src/patchelf.cc" FILE_CONTENTS) 
-string(APPEND FILE_CONTENTS "\n#include \"../../../src/wpatchelf.h\"\n")
-string(REPLACE "elfFile.setInterpreter(newInterpreter);\n" "try {elfFile.setInterpreter(newInterpreter);} catch (...) {}" FILE_CONTENTS "${FILE_CONTENTS}") 
-file(WRITE "${PATCHELF_SOURCE_DIRECTORY}/src/patchelf.cc" "${FILE_CONTENTS}") 
-
 file(READ "${ZLIB_SOURCE_DIRECTORY}/CMakeLists.txt" FILE_CONTENTS)
 string(REPLACE "(UNIX)" "(1)" FILE_CONTENTS "${FILE_CONTENTS}")
 string(REPLACE "(NOT APPLE)" "(0)" FILE_CONTENTS "${FILE_CONTENTS}")
@@ -553,12 +546,6 @@ set(ZSTD_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_
 
 set(LIBLZMA_INCLUDE_DIR "${XZ_SOURCE_DIRECTORY}/src/liblzma/api" CACHE PATH "")
 set(LIBLZMA_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
-
-add_library(
-	patchelf
-	SHARED
-	"${PATCHELF_SOURCE_DIRECTORY}/src/patchelf.cc"
-)
 
 add_library(
 	bearssl
@@ -706,17 +693,10 @@ set_target_properties(
 )
 
 set_target_properties(
-	libcurl_shared archive patchelf
+	libcurl_shared archive
 	PROPERTIES
 	BUILD_RPATH "${LIB_RPATH}"
 	INSTALL_RPATH "${LIB_RPATH}"
-)
-
-set_target_properties(
-	patchelf
-	PROPERTIES
-	CXX_STANDARD 17
-	CXX_STANDARD_REQUIRED ON
 )
 
 # Enable Unicode on Windows builds
@@ -760,7 +740,6 @@ target_link_libraries(
 	nz
 	libcurl_shared
 	archive
-	patchelf
 )
 
 install(
