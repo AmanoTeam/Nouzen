@@ -602,7 +602,7 @@ architecture_t get_architecture(const char* const name) {
 		return ARCH_ARMEL;
 	}
 	
-	if (strcmp(name, "armhf") == 0) {
+	if (strcmp(name, "armhf") == 0 || strcmp(name, "armv7") == 0) {
 		return ARCH_ARMHF;
 	}
 	
