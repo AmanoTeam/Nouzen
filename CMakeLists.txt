@@ -526,6 +526,7 @@ include_directories(${INCLUDE_DIRECTORIES})
 set(
 	NGHTTP2_INCLUDE_DIR
 	"${NGHTTP2_SOURCE_DIRECTORY}/lib/includes"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/nghttp2/lib/includes"
 	"${CMAKE_BINARY_DIR}/submodules/nghttp2/lib/includes"
 	CACHE PATH ""
 )
