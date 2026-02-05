@@ -5,7 +5,7 @@ project(
 	VERSION 0.1
 	DESCRIPTION "A command-line utility to download and install packages from APT repositories."
 	HOMEPAGE_URL "https://github.com/AmanoTeam/Nouzen"
-	LANGUAGES C CXX
+	LANGUAGES C
 )
 
 option(NOUZEN_ENABLE_LTO "Turn on compiler link-time optimizations" OFF)
@@ -52,6 +52,7 @@ set(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src"
 	"${BEARSSL_SOURCE_DIRECTORY}/src"
 	"${BEARSSL_SOURCE_DIRECTORY}/inc"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/nghttp2/lib/includes"
 )
 
 set(
@@ -527,7 +528,6 @@ set(
 	NGHTTP2_INCLUDE_DIR
 	"${NGHTTP2_SOURCE_DIRECTORY}/lib/includes"
 	"${CMAKE_CURRENT_BINARY_DIR}/submodules/nghttp2/lib/includes"
-	"${CMAKE_BINARY_DIR}/submodules/nghttp2/lib/includes"
 	CACHE PATH ""
 )
 
