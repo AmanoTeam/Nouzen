@@ -8,9 +8,10 @@ project(
 	LANGUAGES C CXX
 )
 
-option(NOUZEN_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
-option(NOUZEN_ENABLE_UNICODE "Enable unicode support for Windows builds" ON)
-option(NOUZEN_DBG "Enable building the main executable with debugging symbols even in release builds" OFF)
+option(NOUZEN_ENABLE_LTO "Turn on compiler link-time optimizations" OFF)
+option(NOUZEN_ENABLE_UNICODE "Enable Unicode support for Windows builds" ON)
+option(NOUZEN_DBG "Build the main project with debugging symbols, even in release builds" OFF)
+option(NOUZEN_BUILD_SHARED "Build the project as a shared library" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -84,7 +85,6 @@ set(
 	"${CMAKE_SOURCE_DIR}/src/guess_uri.c"
 	"${CMAKE_SOURCE_DIR}/src/hex.c"
 	"${CMAKE_SOURCE_DIR}/src/errors.c"
-	"${CMAKE_SOURCE_DIR}/src/main.c"
 	"${CMAKE_SOURCE_DIR}/src/logging.c"
 	"${CMAKE_SOURCE_DIR}/src/options.c"
 	"${CMAKE_SOURCE_DIR}/src/os/cpuinfo.c"
@@ -660,10 +660,24 @@ set_target_properties(
 	IMPORTED_LOCATION "${BEARSSL_LIBRARY}"
 )
 
-add_executable(
-	nz
-	${NOUZEN_SOURCE_FILES}
-)
+if (NOUZEN_BUILD_SHARED)
+	add_library(
+		nz
+		SHARED
+		${NOUZEN_SOURCE_FILES}
+	)
+else()
+	target_sources(
+		nz
+		PRIVATE
+		"${CMAKE_SOURCE_DIR}/src/main.c"
+	)
+	
+	add_executable(
+		nz
+		${NOUZEN_SOURCE_FILES}
+	)
+endif()
 
 target_compile_options(
 	nz

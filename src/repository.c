@@ -54,6 +54,10 @@ static const char SOURCES_CACHE_DIRECTORY[] =
 	PATHSEP_M
 	"sources.cache";
 
+static const char SOURCES_TEMPORARY_DIRECTORY[] = 
+	PATHSEP_M
+	"sources.temp";
+
 static const char PACKAGES_DIRECTORY[] = 
 	PATHSEP_M
 	"packages.installed";
@@ -101,6 +105,8 @@ static const char* const PACKAGES_FILE_EXT[] = {
 	GZ_FILE_EXT,
 	""
 };
+
+static char* local_config_dir = NULL;
 
 const char* get_loader(const architecture_t architecture) {
 	
@@ -193,7 +199,7 @@ char* get_local_temp_dir(void) {
 	char* directory = NULL;
 	char* temporary_directory = NULL;
 	
-	directory = get_temp_dir();
+	directory = repo_get_config_dir();
 	
 	if (directory == NULL) {
 		return directory;
@@ -201,8 +207,8 @@ char* get_local_temp_dir(void) {
 	
 	temporary_directory = malloc(
 		strlen(directory) +
-		strlen(PATHSEP_S) +
-		strlen(PROJECT_NAME_LOWERCASE) + 1
+		strlen(SOURCES_TEMPORARY_DIRECTORY) +
+		1
 	);
 	
 	if (temporary_directory == NULL) {
@@ -211,8 +217,7 @@ char* get_local_temp_dir(void) {
 	}
 	
 	strcpy(temporary_directory, directory);
-	strcat(temporary_directory, PATHSEP_S);
-	strcat(temporary_directory, PROJECT_NAME_LOWERCASE);
+	strcat(temporary_directory, SOURCES_TEMPORARY_DIRECTORY);
 	
 	if (create_directory(temporary_directory) != 0) {
 		free(directory);
@@ -224,15 +229,34 @@ char* get_local_temp_dir(void) {
 	
 }
 
+int repo_set_config_dir(const char* const directory) {
+	
+	free(local_config_dir);
+	local_config_dir = malloc(strlen(directory) + 1);
+	
+	if (local_config_dir == NULL) {
+		return APTERR_MEM_ALLOC_FAILURE;
+	}
+	
+	strcpy(local_config_dir, directory);
+	
+	return APTERR_SUCCESS;
+	
+}
+
 char* repo_get_config_dir(void) {
 	
 	char* app_directory = NULL;
 	char* name = NULL;
 	
-	app_directory = get_app_directory();
+	app_directory = local_config_dir;
 	
 	if (app_directory == NULL) {
-		goto end;
+		app_directory = get_app_directory();
+		
+		if (app_directory == NULL) {
+			goto end;
+		}
 	}
 	
 	name = malloc(
@@ -259,7 +283,9 @@ char* repo_get_config_dir(void) {
 	
 	end:;
 	
-	free(app_directory);
+	if (app_directory != local_config_dir) {
+		free(app_directory);
+	}
 	
 	return name;
 	
