@@ -667,15 +667,15 @@ if (NOUZEN_BUILD_SHARED)
 		${NOUZEN_SOURCE_FILES}
 	)
 else()
+	add_executable(
+		nz
+		${NOUZEN_SOURCE_FILES}
+	)
+	
 	target_sources(
 		nz
 		PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
-	)
-	
-	add_executable(
-		nz
-		${NOUZEN_SOURCE_FILES}
 	)
 endif()
 
