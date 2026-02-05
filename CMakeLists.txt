@@ -5,12 +5,13 @@ project(
 	VERSION 0.1
 	DESCRIPTION "A command-line utility to download and install packages from APT repositories."
 	HOMEPAGE_URL "https://github.com/AmanoTeam/Nouzen"
-	LANGUAGES C CXX
+	LANGUAGES C
 )
 
-option(NOUZEN_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
-option(NOUZEN_ENABLE_UNICODE "Enable unicode support for Windows builds" ON)
-option(NOUZEN_DBG "Enable building the main executable with debugging symbols even in release builds" OFF)
+option(NOUZEN_ENABLE_LTO "Turn on compiler link-time optimizations" OFF)
+option(NOUZEN_ENABLE_UNICODE "Enable Unicode support for Windows builds" ON)
+option(NOUZEN_DBG "Build the main project with debugging symbols, even in release builds" OFF)
+option(NOUZEN_BUILD_SHARED "Build the project as a shared library" OFF)
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -37,73 +38,75 @@ set(
 	"-Wextra"
 )
 
-set(CURL_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/curl")
-set(BEARSSL_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/bearssl")
-set(NGHTTP2_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/nghttp2")
-set(LIBARCHIVE_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/libarchive")
-set(XZ_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/xz-utils")
-set(ZLIB_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/zlib")
-set(ZSTD_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/zstd")
-set(BZIP2_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/bzip2")
+set(CURL_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/curl")
+set(BEARSSL_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/bearssl")
+set(NGHTTP2_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/nghttp2")
+set(LIBARCHIVE_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/libarchive")
+set(XZ_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/xz-utils")
+set(ZLIB_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/zlib")
+set(ZSTD_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/zstd")
+set(BZIP2_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submodules/bzip2")
 
 set(
 	INCLUDE_DIRECTORIES
-	"${CMAKE_SOURCE_DIR}/src"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src"
 	"${BEARSSL_SOURCE_DIRECTORY}/src"
 	"${BEARSSL_SOURCE_DIRECTORY}/inc"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/nghttp2/lib/includes"
 )
 
 set(
 	NOUZEN_SOURCE_FILES
-	"${CMAKE_SOURCE_DIR}/src/argparse.c"
-	"${CMAKE_SOURCE_DIR}/src/ask.c"
-	"${CMAKE_SOURCE_DIR}/src/base_uri.c"
-	"${CMAKE_SOURCE_DIR}/src/biggestint.c"
-	"${CMAKE_SOURCE_DIR}/src/buffer.c"
-	"${CMAKE_SOURCE_DIR}/src/downloader.c"
-	"${CMAKE_SOURCE_DIR}/src/format.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/absrel.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/exists.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/getexec.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/mkdir.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/normpath.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/parentpath.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/realpath.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/rm.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/stripsep.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/splitext.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/chdir.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/symlink.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/chmod.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/walkdir.c"
-	"${CMAKE_SOURCE_DIR}/src/fs/fstream.c"
-	"${CMAKE_SOURCE_DIR}/src/term/screen.c"
-	"${CMAKE_SOURCE_DIR}/src/term/keyboard.c"
-	"${CMAKE_SOURCE_DIR}/src/wildcard_match.c"
-	"${CMAKE_SOURCE_DIR}/src/guess_file_format.c"
-	"${CMAKE_SOURCE_DIR}/src/guess_uri.c"
-	"${CMAKE_SOURCE_DIR}/src/hex.c"
-	"${CMAKE_SOURCE_DIR}/src/errors.c"
-	"${CMAKE_SOURCE_DIR}/src/main.c"
-	"${CMAKE_SOURCE_DIR}/src/logging.c"
-	"${CMAKE_SOURCE_DIR}/src/options.c"
-	"${CMAKE_SOURCE_DIR}/src/os/cpuinfo.c"
-	"${CMAKE_SOURCE_DIR}/src/os/envdir.c"
-	"${CMAKE_SOURCE_DIR}/src/os/find_exe.c"
-	"${CMAKE_SOURCE_DIR}/src/os/shell.c"
-	"${CMAKE_SOURCE_DIR}/src/os/osdetect.c"
-	"${CMAKE_SOURCE_DIR}/src/package.c"
-	"${CMAKE_SOURCE_DIR}/src/pprint.c"
-	"${CMAKE_SOURCE_DIR}/src/progress_callback.c"
-	"${CMAKE_SOURCE_DIR}/src/query.c"
-	"${CMAKE_SOURCE_DIR}/src/repository.c"
-	"${CMAKE_SOURCE_DIR}/src/sslcerts.c"
-	"${CMAKE_SOURCE_DIR}/src/strsplit.c"
-	"${CMAKE_SOURCE_DIR}/src/uncompress.c"
-	"${CMAKE_SOURCE_DIR}/src/urldecode.c"
-	"${CMAKE_SOURCE_DIR}/src/urlencode.c"
-	"${CMAKE_SOURCE_DIR}/src/wcurl.c"
-	"${CMAKE_SOURCE_DIR}/src/write_callback.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/argparse.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/ask.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/base_uri.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/biggestint.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/buffer.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/downloader.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/format.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/absrel.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/exists.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/getexec.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/mkdir.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/normpath.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/parentpath.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/realpath.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/rm.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/stripsep.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/splitext.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/chdir.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/symlink.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/chmod.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/walkdir.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/fs/fstream.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/term/screen.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/term/keyboard.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/wildcard_match.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/guess_file_format.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/guess_uri.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/hex.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/errors.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/options.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/cpuinfo.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/envdir.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/find_exe.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/system.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/execv.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/posix_spawn.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/osdetect.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/package.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/pprint.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/progress_callback.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/query.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/repository.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/sslcerts.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/strsplit.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/uncompress.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/urldecode.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/urlencode.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/wcurl.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/write_callback.c"
 )
 
 set(
@@ -487,6 +490,7 @@ set(ZSTD_BUILD_TESTS OFF)
 set(ZSTD_BUILD_STATIC OFF)
 
 # libarchive
+set(ENABLE_TEST OFF)
 set(HAVE_LIBZSTD ON)
 set(HAVE_LZMA_STREAM_ENCODER_MT OFF)
 set(LIBLZMA_HAS_AUTO_DECODER ON)
@@ -526,26 +530,26 @@ include_directories(${INCLUDE_DIRECTORIES})
 set(
 	NGHTTP2_INCLUDE_DIR
 	"${NGHTTP2_SOURCE_DIRECTORY}/lib/includes"
-	"${CMAKE_BINARY_DIR}/submodules/nghttp2/lib/includes"
+	"${CMAKE_CURRENT_BINARY_DIR}/submodules/nghttp2/lib/includes"
 	CACHE PATH ""
 )
 
-set(NGHTTP2_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}nghttp2${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(NGHTTP2_LIBRARY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}nghttp2${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 set(BEARSSL_INCLUDE_DIR "${BEARSSL_SOURCE_DIRECTORY}/inc" CACHE PATH "")
-set(BEARSSL_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}bearssl${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(BEARSSL_LIBRARY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}bearssl${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 set(BZIP2_INCLUDE_DIR "${BZIP2_SOURCE_DIRECTORY}" CACHE PATH "")
-set(BZIP2_LIBRARIES "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}bz2${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(BZIP2_LIBRARIES "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}bz2${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 set(ZLIB_INCLUDE_DIR "${ZLIB_SOURCE_DIRECTORY}" CACHE PATH "")
-set(ZLIB_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(ZLIB_LIBRARY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 set(ZSTD_INCLUDE_DIR "${ZSTD_SOURCE_DIRECTORY}/lib" CACHE PATH "")
-set(ZSTD_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(ZSTD_LIBRARY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 set(LIBLZMA_INCLUDE_DIR "${XZ_SOURCE_DIRECTORY}/src/liblzma/api" CACHE PATH "")
-set(LIBLZMA_LIBRARY "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
+set(LIBLZMA_LIBRARY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX}" CACHE FILEPATH "")
 
 add_library(
 	bearssl
@@ -660,10 +664,24 @@ set_target_properties(
 	IMPORTED_LOCATION "${BEARSSL_LIBRARY}"
 )
 
-add_executable(
-	nz
-	${NOUZEN_SOURCE_FILES}
-)
+if (NOUZEN_BUILD_SHARED)
+	add_library(
+		nz
+		SHARED
+		${NOUZEN_SOURCE_FILES}
+	)
+else()
+	add_executable(
+		nz
+		${NOUZEN_SOURCE_FILES}
+	)
+	
+	target_sources(
+		nz
+		PRIVATE
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
+	)
+endif()
 
 target_compile_options(
 	nz
@@ -749,24 +767,24 @@ install(
 )
 
 install(
-	FILES "${CMAKE_SOURCE_DIR}/submodules/cabundle/pem/cert.pem"
+	FILES "${CMAKE_CURRENT_SOURCE_DIR}/submodules/cabundle/pem/cert.pem"
 	DESTINATION etc/tls
 	RENAME cert.pem
 )
 
 install(
-	FILES "${CMAKE_SOURCE_DIR}/options.conf"
+	FILES "${CMAKE_CURRENT_SOURCE_DIR}/options.conf"
 	DESTINATION etc/nouzen
 )
 
 install(
-	PROGRAMS "${CMAKE_SOURCE_DIR}/tools/apt.sh"
+	PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/tools/apt.sh"
 	TYPE BIN
 	RENAME apt
 )
 
 install(
-	PROGRAMS "${CMAKE_SOURCE_DIR}/tools/apt.sh"
+	PROGRAMS "${CMAKE_CURRENT_SOURCE_DIR}/tools/apt.sh"
 	TYPE BIN
 	RENAME apt-get
 )

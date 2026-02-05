@@ -104,6 +104,7 @@ repo_t* repolist_get_pkg_repo(
 	const pkg_t* const pkg
 );
 
+int repo_set_config_dir(const char* const directory);
 char* repo_get_config_dir(void);
 
 #endif

@@ -8,7 +8,7 @@
 	#include <sys/wait.h>
 #endif
 
-#include "os/shell.h"
+#include "os/system.h"
 
 int execute_shell_command(const char* const command) {
 	/*
