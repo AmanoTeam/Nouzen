@@ -154,12 +154,28 @@ int wcurl_init(wcurl_t* const wcurl) {
 		goto end;
 	}
 	
-	err = sslcerts_load_certificates(curl);
-	
-	if (err != SSLCERTS_SUCCESS) {
-		err = WCURL_ERR_SSL_CERT_LOAD_FAILURE;
-		goto end;
-	}
+	#if defined(WCURL_DISABLE_SSL_VERIFY)
+		code = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+		
+		if (code != CURLE_OK) {
+			err = WCURL_ERR_SETOPT_FAILURE;
+			goto end;
+		}
+		
+		code = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+		
+		if (code != CURLE_OK) {
+			err = WCURL_ERR_SETOPT_FAILURE;
+			goto end;
+		}
+	#else
+		err = sslcerts_load_certificates(curl);
+		
+		if (err != SSLCERTS_SUCCESS) {
+			err = WCURL_ERR_SSL_CERT_LOAD_FAILURE;
+			goto end;
+		}
+	#endif
 	
 	end:;
 	

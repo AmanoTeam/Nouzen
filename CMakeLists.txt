@@ -8,10 +8,11 @@ project(
 	LANGUAGES C
 )
 
-option(NOUZEN_ENABLE_LTO "Turn on compiler link-time optimizations" OFF)
-option(NOUZEN_ENABLE_UNICODE "Enable Unicode support for Windows builds" ON)
+option(NOUZEN_LTO "Turn on compiler link-time optimizations" OFF)
+option(NOUZEN_UNICODE "Enable Unicode support for Windows builds" ON)
 option(NOUZEN_DBG "Build the main project with debugging symbols, even in release builds" OFF)
 option(NOUZEN_BUILD_SHARED "Build the project as a shared library" OFF)
+option(NOUZEN_SSL_VERIFY "Enable SSL certificate verification in the network library" ON)
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
@@ -465,7 +466,7 @@ set(BUILD_TESTING OFF)
 set(BUILD_EXAMPLES OFF)
 set(CURL_ENABLE_EXPORT_TARGET OFF)
 
-if (WIN32 AND NOUZEN_ENABLE_UNICODE)
+if (WIN32 AND NOUZEN_UNICODE)
 	set(ENABLE_UNICODE ON)
 endif()
 
@@ -703,6 +704,14 @@ target_compile_definitions(
 	CURL_SKIP_INCLUDE_MPRINTF
 )
 
+if (NOT NOUZEN_SSL_VERIFY)
+	target_compile_definitions(
+		nz
+		PRIVATE
+		WCURL_DISABLE_SSL_VERIFY
+	)
+endif()
+
 set_target_properties(
 	nz
 	PROPERTIES
@@ -718,7 +727,7 @@ set_target_properties(
 )
 
 # Enable Unicode on Windows builds
-if (WIN32 AND NOUZEN_ENABLE_UNICODE)
+if (WIN32 AND NOUZEN_UNICODE)
 	target_sources(
 		nz
 		PRIVATE
@@ -739,7 +748,7 @@ if (WIN32 AND NOUZEN_ENABLE_UNICODE)
 	)
 endif()
 
-if (NOUZEN_ENABLE_LTO)
+if (NOUZEN_LTO)
 	set(NOUZEN_HAS_LTO OFF)
 	
 	include(CheckIPOSupported)
