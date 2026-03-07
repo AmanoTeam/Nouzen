@@ -24,4 +24,4 @@
 	url = https://github.com/facebook/zstd
 [submodule "submodules/bzip2"]
 	path = submodules/bzip2
-	url = https://gitlab.com/federicomenaquintero/bzip2
+	url = https://gitlab.com/bzip2/bzip2

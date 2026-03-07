@@ -526,6 +526,10 @@ file(READ "${LIBARCHIVE_SOURCE_DIRECTORY}/CMakeLists.txt" FILE_CONTENTS)
 string(REPLACE "Haiku" "none" FILE_CONTENTS "${FILE_CONTENTS}")
 file(WRITE "${LIBARCHIVE_SOURCE_DIRECTORY}/CMakeLists.txt" "${FILE_CONTENTS}")
 
+file(READ "${NGHTTP2_SOURCE_DIRECTORY}/lib/CMakeLists.txt" FILE_CONTENTS)
+string(REPLACE "add_library(nghttp2 ALIAS \${LIB_SELECTED})" "" FILE_CONTENTS "${FILE_CONTENTS}")
+file(WRITE "${NGHTTP2_SOURCE_DIRECTORY}/lib/CMakeLists.txt" "${FILE_CONTENTS}")
+
 include_directories(${INCLUDE_DIRECTORIES})
 
 set(
@@ -797,3 +801,4 @@ install(
 	TYPE BIN
 	RENAME apt-get
 )
+
