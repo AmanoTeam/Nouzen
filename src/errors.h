@@ -81,6 +81,8 @@
 #define APTERR_WCURL_SETOPT_FAILURE -59 /* Could not set options on HTTP client */
 #define APTERR_WCURL_SLIST_FAILURE -60 /* Could not append item to list */
 
+#define APTERR_RLIMIT_NOFILE_FAILURE -61 /* Failed to increase the maximum open files limit */
+
 const char* apterr_getmessage(const int code);
 
 #endif

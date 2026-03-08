@@ -96,6 +96,7 @@ set(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/execv.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/posix_spawn.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/osdetect.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/os/rlimit.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/package.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/pprint.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/progress_callback.c"

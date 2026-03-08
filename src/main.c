@@ -20,6 +20,7 @@
 #include "wcurl.h"
 #include "program_help.h"
 #include "os/cpuinfo.h"
+#include "os/rlimit.h"
 #include "os/osdetect.h"
 #include "nouzen.h"
 #include "term/keyboard.h"
@@ -652,6 +653,13 @@ int main(int argc, argv_t* argv[]) {
 	err = repolist_load(&list);
 	
 	if (err != APTERR_SUCCESS) {
+		goto end;
+	}
+	
+	err = resources_increase_maxfd();
+	
+	if (err == -1) {
+		err = APTERR_RLIMIT_NOFILE_FAILURE;
 		goto end;
 	}
 	
