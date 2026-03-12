@@ -616,6 +616,13 @@ target_compile_definitions(
 	ZDICT_QSORT=ZDICT_QSORT_MIN
 )
 
+set_target_properties(
+	archive
+	PROPERTIES
+	C_STANDARD 99
+	C_STANDARD_REQUIRED ON
+)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
 	target_compile_options(
 		liblzma

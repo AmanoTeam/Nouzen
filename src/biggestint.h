@@ -1,7 +1,7 @@
 #if !defined(BIGGESTINT_H)
 #define BIGGESTINT_H
 
-#include <stddef.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <float.h>
 #include <limits.h>
