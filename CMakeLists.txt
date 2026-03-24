@@ -108,6 +108,7 @@ set(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/urldecode.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/urlencode.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/wcurl.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/strsub.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/write_callback.c"
 )
 
@@ -618,6 +619,13 @@ target_compile_definitions(
 
 set_target_properties(
 	archive
+	PROPERTIES
+	C_STANDARD 99
+	C_STANDARD_REQUIRED ON
+)
+
+set_target_properties(
+	liblzma
 	PROPERTIES
 	C_STANDARD 99
 	C_STANDARD_REQUIRED ON

@@ -8,9 +8,10 @@
 #include "logging.h"
 #include "errors.h"
 
-#define REPO_TYPE_UNKNOWN (0x00)
-#define REPO_TYPE_APT (0x01)
-#define REPO_TYPE_APK (0x02)
+#define REPO_TYPE_APT (0)
+#define REPO_TYPE_APK (1)
+#define REPO_TYPE_PACMAN (2)
+#define REPO_TYPE_UNKNOWN (1000)
 
 static const char* APT_SECTION_KEYS[] = {
 	"Architecture",
@@ -40,8 +41,8 @@ static const char* APT_SECTION_KEYS[] = {
 	"Important",
 	"Installed-Size",
 	"Lua-Versions",
-	"Maintainer",
 	"MD5sum",
+	"Maintainer",
 	"Modaliases",
 	"Multi-Arch",
 	"Origin",
@@ -57,10 +58,10 @@ static const char* APT_SECTION_KEYS[] = {
 	"Recommends",
 	"Replaces",
 	"Ruby-Versions",
-	"Section",
 	"SHA1",
 	"SHA256",
 	"SHA512",
+	"Section",
 	"Size",
 	"Source",
 	"Suggests",
@@ -69,6 +70,12 @@ static const char* APT_SECTION_KEYS[] = {
 	"Ubuntu-Oem-Kernel-Flavour",
 	"Version",
 	"X-Cargo-Built-Using"
+};
+
+static const size_t APT_SECTION_KEYS_SIZE[] = {
+	12, 6, 4, 15, 9, 11, 18, 19, 19, 9, 7, 11, 15, 10, 8, 9, 8, 18, 18, 18,
+	19, 21, 17, 8, 9, 14, 12, 6, 10, 10, 10, 6, 19, 20, 16, 7, 21, 11, 8, 9,
+	8, 10, 8, 13, 4, 6, 6, 7, 4, 6, 8, 3, 4, 25, 7, 19
 };
 
 static const char* APK_SECTION_KEYS[] = {
@@ -89,7 +96,42 @@ static const char* APK_SECTION_KEYS[] = {
 	"p"
 };
 
-int pkg_key_matches(const int type, const char* const line) {
+static const size_t APK_SECTION_KEYS_SIZE[] = {
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+
+static const char* PACMAN_SECTION_KEYS[] = {
+	"%ARCH%",
+	"%BASE%",
+	"%BUILDDATE%",
+	"%CONFLICTS%",
+	"%CSIZE%",
+	"%DEPENDS%",
+	"%DESC%",
+	"%FILENAME%",
+	"%GROUPS%",
+	"%ISIZE%",
+	"%LICENSE%",
+	"%MAKEDEPENDS%",
+	"%MD5SUM%",
+	"%NAME%",
+	"%OPTDEPENDS%",
+	"%PACKAGER%",
+	"%PGPSIG%",
+	"%PROVIDES%",
+	"%REPLACES%",
+	"%SHA256SUM%",
+	"%URL%",
+	"%VERSION%",
+	"%CHECKDEPENDS%"
+};
+
+static const size_t PACMAN_SECTION_KEYS_SIZE[] = {
+	6, 6, 11, 11, 7, 9, 6, 10, 8, 7, 9, 13, 8, 6, 12, 10, 8, 10, 10, 11,
+	5, 9, 14
+};
+
+ int pkg_key_matches(const int type, const char* const line) {
 	
 	size_t index = 0;
 	
@@ -100,36 +142,40 @@ int pkg_key_matches(const int type, const char* const line) {
 	
 	const char* key = NULL;
 	const char** items = NULL;
-	
+	const size_t* sizes = NULL;
+ 
 	switch (type) {
 		case REPO_TYPE_APT: {
 			items = APT_SECTION_KEYS;
 			offset = sizeof(APT_SECTION_KEYS) / sizeof(*APT_SECTION_KEYS);
+			sizes = APT_SECTION_KEYS_SIZE;
 			break;
 		}
 		case REPO_TYPE_APK: {
 			items = APK_SECTION_KEYS;
 			offset = sizeof(APK_SECTION_KEYS) / sizeof(*APK_SECTION_KEYS);
+			sizes = APK_SECTION_KEYS_SIZE;
 			break;
 		}
-		default: {
-			items = NULL;
-			offset = 0;
+		case REPO_TYPE_PACMAN: {
+			items = PACMAN_SECTION_KEYS;
+			offset = sizeof(PACMAN_SECTION_KEYS) / sizeof(*PACMAN_SECTION_KEYS);
+			sizes = PACMAN_SECTION_KEYS_SIZE;
 			break;
 		}
 	}
 	
-	for (index = 0; index < offset; index++) {
+	for (index = 0; index < offset; index++  ) {
 		key = items[index];
-		size = strlen(key);
+		size = sizes[index];
 		
-		matches = (strncmp(key, line, size) == 0 && line[size] == ':');
+		matches = (strncmp(key, line, size) == 0 && (type == REPO_TYPE_PACMAN || line[size] == ':'));
 		
 		if (!matches) {
 			continue;
 		}
 		
-		return matches;
+		break;
 	}
 	
 	return matches;

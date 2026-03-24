@@ -20,9 +20,10 @@
 #define REPOLIST_RESOLVE_RECOMMENDS (0x03)
 #define REPOLIST_RESOLVE_REPLACES (0x04)
 
-#define REPO_TYPE_UNKNOWN (0x00)
-#define REPO_TYPE_APT (0x01)
-#define REPO_TYPE_APK (0x02)
+#define REPO_TYPE_APT (0)
+#define REPO_TYPE_APK (1)
+#define REPO_TYPE_PACMAN (2)
+#define REPO_TYPE_UNKNOWN (1000)
 
 struct Repository {
 	int type;
@@ -31,6 +32,8 @@ struct Repository {
 	char* release;
 	char* resource;
 	char* platform;
+	char* location;
+	char* specification;
 	architecture_t architecture;
 	pkgs_t pkgs;
 	base_uri_t uri;

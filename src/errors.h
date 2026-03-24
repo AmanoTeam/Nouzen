@@ -67,6 +67,7 @@
 #define APTERR_REPO_PKG_INDEX_TOO_LARGE -48 /* This package index exceeds the maximum allowed size */
 #define APTERR_REPO_UNKNOWN_ARCHITECTURE -49 /* Unknown repository architecture */
 #define APTERR_REPO_UNKNOWN_FORMAT -499 /* Unknown repository format */
+#define APTERR_REPO_EMPTY -4990 /* Repository package index is empty */
 
 #define APTERR_WCURLMLT_ADD_FAILURE -50 /* Could not add the cURL handler to cURL multi */
 #define APTERR_WCURLMLT_INIT_FAILURE -51 /* Could not initialize the cURL multi interface */

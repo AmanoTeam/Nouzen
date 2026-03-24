@@ -133,6 +133,8 @@ const char* apterr_getmessage(const int code) {
 			return "Could not append item to list";
 		case APTERR_RLIMIT_NOFILE_FAILURE:
 			return "Failed to increase the maximum open files limit";
+		case APTERR_REPO_EMPTY:
+			return "Repository package index is empty";
 	}
 	
 	return "Unknown error";

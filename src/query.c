@@ -353,27 +353,23 @@ int query_add_string(
 	size = strlen(key);
 	
 	if (size > 0) {
-		parameter.key = malloc(size + 1);
+		parameter.key = strdup(key);
 		
 		if (parameter.key == NULL) {
 			err = -1;
 			goto end;
 		}
-		
-		strcpy(parameter.key, key);
 	}
 	
 	size = strlen(value);
 	
 	if (size > 0) {
-		parameter.value = malloc(size + 1);
+		parameter.value = strdup(value);
 		
 		if (parameter.value == NULL) {
 			err = -1;
 			goto end;
 		}
-		
-		strcpy(parameter.value, value);
 	}
 	
 	err = put_parameter(query, &parameter);
@@ -608,7 +604,9 @@ int query_load_string(
 		memcpy(param.key, subpart.begin, subpart.size);
 		param.key[subpart.size] = '\0';
 		
-		urldecode(param.key, param.key);
+		if (query->options & HQUERY_OPT_URL_DECODE) {
+			urldecode(param.key, param.key);
+		}
 		
 		/* Parse parameter value */
 		strsplit_next(&subsplit, &subpart);
@@ -649,7 +647,9 @@ int query_load_string(
 		memcpy(param.value, subpart.begin, subpart.size);
 		param.value[subpart.size] = '\0';
 		
-		urldecode(param.value, param.value);
+		if (query->options & HQUERY_OPT_URL_DECODE) {
+			urldecode(param.value, param.value);
+		}
 		
 		err = put_parameter(query, &param);
 		
@@ -742,6 +742,8 @@ void query_init(
 		query->subsep = EQUAL;
 	}
 	
+	query->options |= (HQUERY_OPT_URL_ENCODE|HQUERY_OPT_URL_DECODE);
+	
 }
 
 int query_load_file(
@@ -764,33 +766,14 @@ int query_load_file(
 		goto end;
 	}
 	
-	err = fstream_seek(stream, 0, FSTREAM_SEEK_END);
+	file_size = fsream_size(stream);
 	
-	if (err == -1) {
+	if (file_size < 1) {
 		err = -1;
 		goto end;
 	}
 	
-	file_size = fstream_tell(stream);
-	
-	if (file_size == -1) {
-		err = -1;
-		goto end;
-	}
-	
-	if (file_size == 0) {
-		err = -1;
-		goto end;
-	}
-	
-	err = fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN);
-	
-	if (err == -1) {
-		err = -1;
-		goto end;
-	}
-	
-	buffer = malloc((size_t) file_size + 1);
+	buffer = malloc((size_t) (file_size + 1));
 	
 	if (buffer == NULL) {
 		err = -1;
@@ -857,7 +840,9 @@ int query_dump_file(
 	
 	query_dump_string(query, buffer);
 	
-	err = fstream_write(stream, buffer, strlen(buffer));
+	size--;
+	
+	err = fstream_write(stream, buffer, size);
 	
 	if (err != FSTREAM_SUCCESS) {
 		err = -1;

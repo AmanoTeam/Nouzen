@@ -3,6 +3,9 @@
 
 #include "biggestint.h"
 
+#define HQUERY_OPT_URL_ENCODE (1 << 0)
+#define HQUERY_OPT_URL_DECODE (1 << 1)
+
 struct hquery_param {
 	char* key;
 	char* value;
@@ -16,6 +19,7 @@ struct hquery {
 	hquery_param_t* parameters;
 	char sep;
 	const char* subsep;
+	int options;
 };
 
 typedef struct hquery hquery_t;

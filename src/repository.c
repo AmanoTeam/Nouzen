@@ -36,10 +36,12 @@
 #include "query.h"
 #include "repository.h"
 #include "strsplit.h"
+#include "strsub.h"
 #include "term/keyboard.h"
 #include "term/screen.h"
 #include "uncompress.h"
 #include "wcurl.h"
+#include "urlencode.h"
 #include "write_callback.h"
 
 static const char ETC_DIRECTORY[] = 
@@ -77,14 +79,19 @@ static const char XZ_FILE_EXT[] = ".xz";
 static const char BZ2_FILE_EXT[] = ".bz2";
 static const char ZST_FILE_EXT[] = ".zst";
 static const char GZ_FILE_EXT[] = ".gz";
+static const char DB_FILE_EXT[] = ".db";
+static const char APK_FILE_EXT[] = ".apk";
 
 static const char KCONFIGURE[] = "configure";
 static const char KUPGRADE[] = "upgrade";
 static const char KINSTALL[] = "install";
 static const char KDISTS[] = "dists";
 static const char KBINARY[] = "binary-";
-static const char KPACKAGES[] = "Packages";
-static const char KAPKINDEX[] = "APKINDEX";
+
+static const char APT_INDEX_FILE[] = "Packages";
+static const char APK_INDEX_FILE[] = "APKINDEX";
+static const char PACMAN_INDEX_FILE[] = "desc";
+
 static const char KHYPHEN[] = "-";
 
 static const char* const SYSTEM_LIBRARY_PATH[] = {
@@ -559,6 +566,8 @@ static int repo_set_uri(
 	int err = APTERR_SUCCESS;
 	int subtype = 0;
 	
+	const char* ptr = NULL;
+	
 	repo->uri.type = type;
 	repo->uri.value = malloc(strlen(uri) + 1);
 	
@@ -590,7 +599,7 @@ static int repo_set_uri(
 			goto end;
 	}
 	
-	repo->base_uri.value = malloc(strlen(base) + 1);
+	repo->base_uri.value = malloc(strlen(base) + strlen(PATHSEP_POSIX_S) + 1);
 	
 	if (repo->base_uri.value == NULL) {
 		err = APTERR_MEM_ALLOC_FAILURE;
@@ -598,6 +607,12 @@ static int repo_set_uri(
 	}
 	
 	strcpy(repo->base_uri.value, base);
+	
+	ptr = strchr(base, '\0') - 1;
+	
+	if (strcmp(ptr, PATHSEP_POSIX_S) != 0) {
+		strcat(repo->base_uri.value, PATHSEP_POSIX_S);
+	}
 	
 	end:;
 	
@@ -613,6 +628,10 @@ static int repotype_unstringify(const char* const value) {
 	
 	if (strcmp(value, "apk") == 0) {
 		return REPO_TYPE_APK;
+	}
+	
+	if (strcmp(value, "pacman") == 0) {
+		return REPO_TYPE_PACMAN;
 	}
 	
 	return REPO_TYPE_UNKNOWN;
@@ -682,15 +701,45 @@ static const char* pkg_get_field_name(const int type, const int field) {
 			
 			break;
 		}
+		case REPO_TYPE_PACMAN: {
+			switch (field) {
+				case PKG_SECTION_FIELD_NAME:
+					return "%NAME%";
+				case PKG_SECTION_FIELD_VERSION:
+					return "%VERSION%";
+				case PKG_SECTION_FIELD_DESCRIPTION:
+					return "%DESC%";
+				case PKG_SECTION_FIELD_DEPENDS:
+					return "%DEPENDS%";
+				case PKG_SECTION_FIELD_PROVIDES:
+					return "%PROVIDES%";
+				case PKG_SECTION_FIELD_BREAKS:
+					return "%CONFLICTS%";
+				case PKG_SECTION_FIELD_REPLACES:
+					return "%REPLACES%";
+				case PKG_SECTION_FIELD_MAINTAINER:
+					return "%PACKAGER%";
+				case PKG_SECTION_FIELD_HOMEPAGE:
+					return "%URL%";
+				case PKG_SECTION_FIELD_SIZE:
+					return "%CSIZE%";
+				case PKG_SECTION_FIELD_INSTALLED_SIZE:
+					return "%ISIZE%";
+				case PKG_SECTION_FIELD_FILENAME:
+					return "%FILENAME%";
+			}
+			
+			break;
+		}
 	}
 	
 	return NULL;
 	
 }
 
-static char* aptpkg_from_apkpkg(const char* const value) {
+static char* pkglist_to_aptlist(const int type, const char* const value) {
 	/*
-	Convert an APK-style (Alpine) package list into an APT-style package list.
+	Convert an APK/Pacman-style package list into an APT-style package list.
 	*/
 	
 	char* begin = NULL;
@@ -723,9 +772,13 @@ static char* aptpkg_from_apkpkg(const char* const value) {
 	
 	result[0] = '\0';
 	
-	strsplit_init(&split, &part, value, " ");
+	strsplit_init(&split, &part, value, ((type == REPO_TYPE_PACMAN) ? "," : " "));
 	
 	while (strsplit_next(&split, &part) != NULL) {
+		if (part.size == 0) {
+			continue;
+		}
+		
 		begin = part.begin;
 		end = (part.begin + part.size);
 		
@@ -908,6 +961,7 @@ int pkg_parse_section(
 	
 	/* Package */
 	key = pkg_get_field_name(repo->type, PKG_SECTION_FIELD_NAME);
+	
 	value = query_get_string(query, key);
 	
 	if (value == NULL) {
@@ -1005,17 +1059,13 @@ int pkg_parse_section(
 	/* Filename */
 	if (repo->type == REPO_TYPE_APK) {
 		pkg->filename = malloc(
-			strlen(repo->release) + 
-			strlen(PATHSEP_POSIX_S) +
-			strlen(repo->resource) + 
-			strlen(PATHSEP_POSIX_S) +
-			strlen(repo->platform) + 
+			strlen(repo->location) + 
 			strlen(PATHSEP_POSIX_S) +
 			strlen(pkg->name) +
 			1 /* - */ +
 			strlen(pkg->version) +
-			4 /* .apk */ +
-			 1
+			strlen(APK_FILE_EXT) +
+			1
 		);
 		
 		if (pkg->filename == NULL) {
@@ -1023,16 +1073,12 @@ int pkg_parse_section(
 			goto end;
 		}
 		
-		strcpy(pkg->filename, repo->release);
-		strcat(pkg->filename, PATHSEP_POSIX_S);
-		strcat(pkg->filename, repo->resource);
-		strcat(pkg->filename, PATHSEP_POSIX_S);
-		strcat(pkg->filename, repo->platform);
+		strcpy(pkg->filename, repo->location);
 		strcat(pkg->filename, PATHSEP_POSIX_S);
 		strcat(pkg->filename, pkg->name);
 		strcat(pkg->filename, "-");
 		strcat(pkg->filename, pkg->version);
-		strcat(pkg->filename, ".apk");
+		strcat(pkg->filename, APK_FILE_EXT);
 	} else {
 		key = pkg_get_field_name(repo->type, PKG_SECTION_FIELD_FILENAME);
 		value = query_get_string(query, key);
@@ -1042,14 +1088,31 @@ int pkg_parse_section(
 			goto end;
 		}
 		
-		pkg->filename = malloc(strlen(value) + 1);
-		
-		if (pkg->filename == NULL) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
+		if (repo->type == REPO_TYPE_PACMAN) {
+			size = strlen(repo->location) + strlen(PATHSEP_POSIX_S) + urlencode(value, NULL);
+			
+			pkg->filename = malloc(size);
+			
+			if (pkg->filename == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(pkg->filename, repo->location);
+			strcat(pkg->filename, PATHSEP_POSIX_S);
+			
+			ptr = strchr(pkg->filename, '\0');
+			urlencode(value, ptr);
+		} else {
+			pkg->filename = malloc(strlen(value) + 1);
+			
+			if (pkg->filename == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			strcpy(pkg->filename, value);
 		}
-		
-		strcpy(pkg->filename, value);
 	}
 	
 	/* Provides */
@@ -1057,8 +1120,8 @@ int pkg_parse_section(
 	value = query_get_string(query, key);
 	
 	if (value != NULL) {
-		if (repo->type == REPO_TYPE_APK) {
-			pkg->provides = aptpkg_from_apkpkg(value);
+		if (repo->type == REPO_TYPE_APK || repo->type == REPO_TYPE_PACMAN) {
+			pkg->provides = pkglist_to_aptlist(repo->type, value);
 		} else {
 			pkg->provides = malloc(strlen(value) + 1);
 			
@@ -1106,8 +1169,8 @@ int pkg_parse_section(
 	value = query_get_string(query, key);
 	
 	if (value != NULL) {
-		if (repo->type == REPO_TYPE_APK) {
-			pkg->depends = aptpkg_from_apkpkg(value);
+		if (repo->type == REPO_TYPE_APK || repo->type == REPO_TYPE_PACMAN) {
+			pkg->depends = pkglist_to_aptlist(repo->type, value);
 		} else {
 			pkg->depends = malloc(strlen(value) + 1);
 			
@@ -1229,8 +1292,12 @@ int repo_load_string(
 	
 	size_t index = 0;
 	ssize_t rsize = 0;
+	
 	strsplit_t split = {0};
 	strsplit_part_t part = {0};
+	
+	walkdir_t walkdir = {0};
+	const walkdir_item_t* item = NULL;
 	
 	hquery_t query = {0};
 	
@@ -1238,12 +1305,15 @@ int repo_load_string(
 	
 	char* section = NULL;
 	
+	char* location = NULL;
 	char* index_file = NULL;
 	
 	char* directory = NULL;
 	char* temporary_directory = NULL;
 	
 	const char* source = string;
+	const char* match = NULL;
+	const char* last_key = NULL;
 	
 	buffer_t buffer = {0};
 	
@@ -1261,29 +1331,32 @@ int repo_load_string(
 		goto end;
 	}
 	
-	index_file = malloc(
+	location = malloc(
 		strlen(temporary_directory) +
 		strlen(PATHSEP_S) +
-		strlen(KAPKINDEX) +
-		strlen(KPACKAGES) +
+		strlen(APK_INDEX_FILE) +
+		strlen(APT_INDEX_FILE) +
 		1
 	);
 	
-	if (index_file == NULL) {
+	if (location == NULL) {
 		err = APTERR_MEM_ALLOC_FAILURE;
 		goto end;
 	}
 	
-	strcpy(index_file, temporary_directory);
-	strcat(index_file, PATHSEP_S);
+	strcpy(location, temporary_directory);
+	strcat(location, PATHSEP_S);
 	
 	switch (repo->type) {
 		case REPO_TYPE_APT: {
-			strcat(index_file, "data");
+			strcat(location, "data");
 			break;
 		}
 		case REPO_TYPE_APK: {
-			strcat(index_file, KAPKINDEX);
+			strcat(location, APK_INDEX_FILE);
+			break;
+		}
+		case REPO_TYPE_PACMAN: {
 			break;
 		}
 		default: {
@@ -1305,57 +1378,115 @@ int repo_load_string(
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", index_file);
+		loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", location);
 		
-		stream = fstream_open(index_file, FSTREAM_READ);
-		
-		if (stream == NULL) {
-			err = APTERR_FSTREAM_OPEN_FAILURE;
-			goto end;
+		if (repo->type == REPO_TYPE_PACMAN) {
+			err = buffer_init(&buffer, APT_MAX_PKG_INDEX_LEN);
+			
+			if (err != 0) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			if (walkdir_init(&walkdir, location) == -1) {
+				err = APTERR_FS_WALKDIR_FAILURE;
+				goto end;
+			}
+			
+			while ((item = walkdir_next(&walkdir)) != NULL) {
+				if (strcmp(item->name, ".") == 0 || strcmp(item->name, "..") == 0) {
+					continue;
+				}
+				
+				free(index_file);
+				
+				index_file = malloc(strlen(location) + strlen(item->name) + strlen(PATHSEP_S) + strlen(PACMAN_INDEX_FILE) + 1);
+				
+				if (index_file == NULL) {
+					err = APTERR_MEM_ALLOC_FAILURE;
+					goto end;
+				}
+				
+				strcpy(index_file, location);
+				strcat(index_file, item->name);
+				strcat(index_file, PATHSEP_S);
+				strcat(index_file, PACMAN_INDEX_FILE);
+				
+				loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", index_file);
+				
+				stream = fstream_open(index_file, FSTREAM_READ);
+				
+				if (stream == NULL) {
+					err = APTERR_FSTREAM_OPEN_FAILURE;
+					goto end;
+				}
+				
+				file_size = fsream_size(stream);
+				
+				if (file_size == FSTREAM_ERROR) {
+					err = APTERR_FSTREAM_TELL_FAILURE;
+					goto end;
+				}
+				
+				index = (size_t) file_size;
+				
+				if (index > (buffer.size - 1)) {
+					err = APTERR_REPO_PKG_INDEX_TOO_LARGE;
+					goto end;
+				}
+				
+				rsize = fstream_read(stream, buffer.data + buffer.offset, index);
+				
+				if (rsize == -1) {
+					err = APTERR_FSTREAM_READ_FAILURE;
+					goto end;
+				}
+				
+				fstream_close(stream);
+				
+				buffer.offset += index;
+			}
+			
+			index = 0;
+			
+			buffer.data[buffer.offset] = '\0';
+		} else {
+			stream = fstream_open(location, FSTREAM_READ);
+			
+			if (stream == NULL) {
+				err = APTERR_FSTREAM_OPEN_FAILURE;
+				goto end;
+			}
+			
+			file_size = fsream_size(stream);
+			
+			if (file_size == FSTREAM_ERROR) {
+				err = APTERR_FSTREAM_TELL_FAILURE;
+				goto end;
+			}
+			
+			err = buffer_init(&buffer, (size_t) file_size + 1);
+			
+			if (err != 0) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			rsize = fstream_read(stream, buffer.data, (size_t) file_size);
+			
+			if (rsize == -1) {
+				err = APTERR_FSTREAM_READ_FAILURE;
+				goto end;
+			}
+			
+			buffer.data[rsize] = '\0';
+			buffer.offset = rsize;
 		}
 		
-		status = fstream_seek(stream, 0, FSTREAM_SEEK_END);
-		
-		if (status == -1) {
-			err = APTERR_FSTREAM_SEEK_FAILURE;
+		if (buffer.offset == 0) {
+			err = APTERR_REPO_EMPTY;
 			goto end;
 		}
-		
-		file_size = fstream_tell(stream);
-		
-		if (file_size == -1) {
-			err = APTERR_FSTREAM_TELL_FAILURE;
-			goto end;
-		}
-		
-		if (file_size == 0) {
-			err = APTERR_FSTREAM_READ_EMPTY_FILE;
-			goto end;
-		}
-		
-		status = fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN);
-		
-		if (status == -1) {
-			err = APTERR_FSTREAM_SEEK_FAILURE;
-			goto end;
-		}
-		
-		err = buffer_init(&buffer, (size_t) file_size + 1);
-		
-		if (err != 0) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		rsize = fstream_read(stream, buffer.data, (size_t) file_size);
-		
-		if (rsize == -1) {
-			err = APTERR_FSTREAM_READ_FAILURE;
-			goto end;
-		}
-		
-		buffer.data[rsize] = '\0';
-		buffer.offset = rsize;
 		
 		source = buffer.data;
 	}
@@ -1381,8 +1512,18 @@ int repo_load_string(
 				continue;
 			}
 			
+			if (repo->type == REPO_TYPE_PACMAN) {
+				match = strchr(part.begin, '%');
+				
+				if (match != NULL && strncmp(match, "%FILENAME%", 10) != 0) {
+					continue;
+				}
+			}
+			
 			query_free(&query);
 			query_init(&query, '\n', ":");
+			
+			query.options &= ~HQUERY_OPT_URL_DECODE;
 			
 			status = query_load_string(&query, section);
 			
@@ -1420,6 +1561,16 @@ int repo_load_string(
 		}
 		
 		strncat(section, part.begin, part.size);
+		
+		if (repo->type == REPO_TYPE_PACMAN) {
+			if (pkg_key_matches(repo->type, part.begin)) {
+				strcat(section, ": ");
+				last_key = part.begin;
+			} else if (strncmp(last_key, "%DEPENDS%", 9) == 0 || strncmp(last_key, "%PROVIDES%", 10) == 0 || strncmp(last_key, "%REPLACES%", 10) == 0 || strncmp(last_key, "%CONFLICTS%", 11) == 0) {
+				strcat(section, ", ");
+			}
+		}
+		
 	}
 	
 	if (cache) {
@@ -1711,10 +1862,51 @@ int repolist_append(
 	
 }
 
+char* spec_get_url(const repo_t* const repo) {
+	
+	char* new = NULL;
+	char* old = NULL;
+	
+	new = strsub("$repo", repo->location, repo->specification);
+	
+	if (new == NULL) {
+		return new;
+	}
+	
+	old = new;
+	new = strsub("$release", repo->release, new);
+	free(old);
+	
+	if (new == NULL) {
+		return new;
+	}
+	
+	old = new;
+	new = strsub("$arch", repo->platform, new);
+	free(old);
+	
+	if (new == NULL) {
+		return new;
+	}
+	
+	old = new;
+	new = strsub("$resource", repo->resource, new);
+	free(old);
+	
+	if (new == NULL) {
+		return new;
+	}
+	
+	return new;
+	
+}
+
 int repolist_load(repolist_t* const list) {
 	
 	int err = APTERR_SUCCESS;
+	int fetch_cache = APTERR_SUCCESS;
 	size_t index = 0;
+	size_t size = 0;
 	
 	size_t sources = 0;
 	
@@ -1736,6 +1928,7 @@ int repolist_load(repolist_t* const list) {
 	const char* release = NULL;
 	const char* resources = NULL;
 	const char* architecture = NULL;
+	const char* specification = NULL;
 	int type = 0;
 	
 	const char* file_extension = NULL;
@@ -1880,6 +2073,25 @@ int repolist_load(repolist_t* const list) {
 			goto end;
 		}
 		
+		/* Format */
+		value = query_get_string(&query, "format");
+		
+		if (value == NULL) {
+			err = APTERR_REPO_CONF_MISSING_FIELD;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Read repository property (type = %s)", value);
+		
+		type = repotype_unstringify(value);
+		
+		if (type == REPO_TYPE_UNKNOWN) {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Repository format '%s' matched as value '%i'", value, type);
+		
 		/* Repository */
 		repository = query_get_string(&query, "repository");
 		
@@ -1920,24 +2132,24 @@ int repolist_load(repolist_t* const list) {
 		
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
 		
-		/* Format */
-		value = query_get_string(&query, "format");
+		/* Architecture */
+		specification = query_get_string(&query, "specification");
 		
-		if (value == NULL) {
-			err = APTERR_REPO_CONF_MISSING_FIELD;
-			goto end;
+		if (specification == NULL) {
+			switch (type) {
+				case REPO_TYPE_PACMAN:
+					specification = "$repo/$resource/$arch";
+					break;
+				case REPO_TYPE_APK:
+					specification = "$repo/$release/$resource/$arch";
+					break;
+				case REPO_TYPE_APT:
+					specification = "$repo/dists/$release/$resource/binary-$arch";
+					break;
+			}
 		}
 		
-		loggln(LOG_VERBOSE, "Read repository property (type = %s)", value);
-		
-		type = repotype_unstringify(value);
-		
-		if (type == REPO_TYPE_UNKNOWN) {
-			err = APTERR_REPO_UNKNOWN_FORMAT;
-			goto end;
-		}
-		
-		loggln(LOG_VERBOSE, "Repository format '%s' matched as value '%i'", value, type);
+		loggln(LOG_VERBOSE, "Read repository property (specification = %s)", specification);
 		
 		strsplit_init(&split, &part, resources, " ");
 		
@@ -2002,77 +2214,104 @@ int repolist_load(repolist_t* const list) {
 			
 			strcpy(repo.platform, architecture);
 			
-			free(url);
+			repo.location = strdup(repository);
 			
-			if (!options->force_refresh) {
-				url = repo_fetch_cache(&repo);
-				
-				if (url != NULL) {
-					err = repo_load(&repo, url, repository, 0);
-					
-					if (err != APTERR_SUCCESS) {
-						goto end;
-					}
-					
-					err = repolist_append(list, &repo);
-					
-					if (err != APTERR_SUCCESS) {
-						goto end;
-					}
-					
-					continue;
-				}
-			}
-			
-			url = malloc(
-				strlen(repository) +
-				strlen(PATHSEP_POSIX_S) +
-				strlen(KDISTS) +
-				strlen(PATHSEP_POSIX_S) +
-				strlen(release) +
-				strlen(PATHSEP_POSIX_S) +
-				part.size + 
-				strlen(PATHSEP_POSIX_S) +
-				strlen(KBINARY) + strlen(architecture) +
-				strlen(PATHSEP_POSIX_S) +
-				strlen(KPACKAGES) +
-				strlen(TAR_FILE_EXT) +
-				1 + 3 + 1
-			);
-			
-			if (url == NULL) {
+			if (repo.location == NULL) {
 				err = APTERR_MEM_ALLOC_FAILURE;
 				goto end;
 			}
 			
-			strcpy(url, repository);
-			strcat(url, PATHSEP_POSIX_S);
+			repo.specification = strdup(specification);
 			
-			if (repo.type == REPO_TYPE_APT) {
-				strcat(url, KDISTS);
+			if (repo.specification == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			free(url);
+			url = NULL;
+			
+			if (!options->force_refresh) {
+				fetch_cache = (url = repo_fetch_cache(&repo)) != NULL;
+			}
+			
+			if (!fetch_cache) {
+				match = spec_get_url(&repo);
+				
+				if (match == NULL) {
+					err = APTERR_MEM_ALLOC_FAILURE;
+					goto end;
+				}
+				
+				url = malloc(
+					strlen(match) +
+					strlen(PATHSEP_POSIX_S) +
+					strlen(APT_INDEX_FILE) +
+					strlen(APK_INDEX_FILE) +
+					strlen(repo.resource) +
+					strlen(TAR_FILE_EXT) +
+					strlen(ZST_FILE_EXT) +
+					1
+				);
+				
+				if (url == NULL) {
+					err = APTERR_MEM_ALLOC_FAILURE;
+					goto end;
+				}
+				
+				strcpy(url, match);
 				strcat(url, PATHSEP_POSIX_S);
+				
+				free(match);
 			}
 			
-			strcat(url, release);
-			strcat(url, PATHSEP_POSIX_S);
-			strncat(url, part.begin, part.size);
-			strcat(url, PATHSEP_POSIX_S);
 			
-			if (repo.type == REPO_TYPE_APT) {
-				strcat(url, KBINARY);
+			free(repo.location);
+			free(repo.specification);
+			
+			repo.specification = strsub("$repo/", "", specification);
+			
+			if (repo.specification == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
 			}
 			
-			strcat(url, architecture);
-			strcat(url, PATHSEP_POSIX_S);
+			repo.location = spec_get_url(&repo);
+			
+			if (repo.location == NULL) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			if (fetch_cache) {
+				err = repo_load(&repo, url, repository, 0);
+				
+				if (err != APTERR_SUCCESS) {
+					goto end;
+				}
+				
+				err = repolist_append(list, &repo);
+				
+				if (err != APTERR_SUCCESS) {
+					goto end;
+				}
+				
+				continue;
+			}
 			
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
-					strcat(url, KPACKAGES);
+					strcat(url, APT_INDEX_FILE);
 					break;
 				}
 				case REPO_TYPE_APK: {
-					strcat(url, KAPKINDEX);
+					strcat(url, APK_INDEX_FILE);
 					strcat(url, TAR_FILE_EXT);
+					break;
+				}
+				case REPO_TYPE_PACMAN: {
+					strcat(url, repo.resource);
+					strcat(url, DB_FILE_EXT);
 					break;
 				}
 				default: {
@@ -2090,7 +2329,7 @@ int repolist_load(repolist_t* const list) {
 				repo.index = repo_index;
 				err = repo_load(&repo, url, repository, options->cache);
 				
-				if (err == APTERR_WCURL_REQUEST_FAILURE) {
+				if (err == APTERR_WCURL_REQUEST_FAILURE || err == APTERR_REPO_EMPTY) {
 					continue;
 				}
 				
@@ -2099,6 +2338,15 @@ int repolist_load(repolist_t* const list) {
 				}
 				
 				break;
+			}
+			
+			if (err == APTERR_REPO_EMPTY) {
+				repo_free(&repo);
+				continue;
+			}
+				
+			if (err != APTERR_SUCCESS) {
+				goto end;
 			}
 			
 			err = repolist_append(list, &repo);
@@ -3961,7 +4209,8 @@ int repolist_install_single_package(
 			
 			break;
 		}
-		case REPO_TYPE_APK: {
+		case REPO_TYPE_APK:
+		case REPO_TYPE_PACMAN: {
 			filename = malloc(strlen(pkg->filename) + 1);
 			
 			if (filename == NULL) {
@@ -4027,7 +4276,8 @@ int repolist_install_single_package(
 			
 			break;
 		}
-		case REPO_TYPE_APK: {
+		case REPO_TYPE_APK:
+		case REPO_TYPE_PACMAN: {
 			break;
 		}
 		default: {
@@ -4273,6 +4523,12 @@ void repo_free(repo_t* const repo) {
 	
 	free(repo->platform);
 	repo->platform = NULL;
+	
+	free(repo->location);
+	repo->location = NULL;
+	
+	free(repo->specification);
+	repo->specification = NULL;
 	
 	pkgs_free(&repo->pkgs, 1);
 	

@@ -156,8 +156,7 @@ int options_load(
 	value = query_get_string(&query, KOPT_PREFIX);
 	
 	if (value == NULL) {
-		err = APTERR_REPO_CONF_MISSING_FIELD;
-		goto end;
+		value = VPREFIX;
 	}
 	
 	if (value[0] == DOLLAR_SIGN) {
