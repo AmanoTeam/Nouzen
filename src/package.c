@@ -11,6 +11,7 @@
 #define REPO_TYPE_UNKNOWN (0x00)
 #define REPO_TYPE_APT (0x01)
 #define REPO_TYPE_APK (0x02)
+#define REPO_TYPE_PACMAN (0x03)
 
 static const char* APT_SECTION_KEYS[] = {
 	"Architecture",
@@ -89,6 +90,31 @@ static const char* APK_SECTION_KEYS[] = {
 	"p"
 };
 
+static const char* PACMAN_SECTION_KEYS[] = {
+	"%FILENAME%",
+	"%NAME%",
+	"%BASE%",
+	"%VERSION%",
+	"%DESC%",
+	"%CSIZE%",
+	"%ISIZE%",
+	"%MD5SUM%",
+	"%SHA256SUM%",
+	"%PGPSIG%",
+	"%URL%",
+	"%LICENSE%",
+	"%ARCH%",
+	"%BUILDDATE%",
+	"%PACKAGER%",
+	"%DEPENDS%",
+	"%MAKEDEPENDS%",
+	"%PROVIDES%",
+	"%REPLACES%",
+	"%CONFLICTS%",
+	"%OPTDEPENDS%",
+	"%GROUPS%"
+};
+
 int pkg_key_matches(const int type, const char* const line) {
 	
 	size_t index = 0;
@@ -112,6 +138,11 @@ int pkg_key_matches(const int type, const char* const line) {
 			offset = sizeof(APK_SECTION_KEYS) / sizeof(*APK_SECTION_KEYS);
 			break;
 		}
+		case REPO_TYPE_PACMAN: {
+			items = PACMAN_SECTION_KEYS;
+			offset = sizeof(PACMAN_SECTION_KEYS) / sizeof(*PACMAN_SECTION_KEYS);
+			break;
+		}
 		default: {
 			items = NULL;
 			offset = 0;
@@ -123,7 +154,7 @@ int pkg_key_matches(const int type, const char* const line) {
 		key = items[index];
 		size = strlen(key);
 		
-		matches = (strncmp(key, line, size) == 0 && line[size] == ':');
+		matches = (strncmp(key, line, size) == 0 && (type == REPO_TYPE_PACMAN || line[size] == ':'));
 		
 		if (!matches) {
 			continue;

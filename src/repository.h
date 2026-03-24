@@ -23,6 +23,7 @@
 #define REPO_TYPE_UNKNOWN (0x00)
 #define REPO_TYPE_APT (0x01)
 #define REPO_TYPE_APK (0x02)
+#define REPO_TYPE_PACMAN (0x03)
 
 struct Repository {
 	int type;

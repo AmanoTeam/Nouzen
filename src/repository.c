@@ -77,14 +77,18 @@ static const char XZ_FILE_EXT[] = ".xz";
 static const char BZ2_FILE_EXT[] = ".bz2";
 static const char ZST_FILE_EXT[] = ".zst";
 static const char GZ_FILE_EXT[] = ".gz";
+static const char DB_FILE_EXT[] = ".db";
 
 static const char KCONFIGURE[] = "configure";
 static const char KUPGRADE[] = "upgrade";
 static const char KINSTALL[] = "install";
 static const char KDISTS[] = "dists";
 static const char KBINARY[] = "binary-";
-static const char KPACKAGES[] = "Packages";
-static const char KAPKINDEX[] = "APKINDEX";
+
+static const char APT_INDEX_FILE[] = "Packages";
+static const char APK_INDEX_FILE[] = "APKINDEX";
+static const char PACMAN_INDEX_FILE[] = "desc";
+
 static const char KHYPHEN[] = "-";
 
 static const char* const SYSTEM_LIBRARY_PATH[] = {
@@ -615,6 +619,10 @@ static int repotype_unstringify(const char* const value) {
 		return REPO_TYPE_APK;
 	}
 	
+	if (strcmp(value, "pacman") == 0) {
+		return REPO_TYPE_PACMAN;
+	}
+	
 	return REPO_TYPE_UNKNOWN;
 	
 }
@@ -678,6 +686,36 @@ static const char* pkg_get_field_name(const int type, const int field) {
 					return "S";
 				case PKG_SECTION_FIELD_INSTALLED_SIZE:
 					return "I";
+			}
+			
+			break;
+		}
+		case REPO_TYPE_PACMAN: {
+			switch (field) {
+				case PKG_SECTION_FIELD_NAME:
+					return "%NAME%";
+				case PKG_SECTION_FIELD_VERSION:
+					return "%VERSION%";
+				case PKG_SECTION_FIELD_DESCRIPTION:
+					return "%DESC%";
+				case PKG_SECTION_FIELD_DEPENDS:
+					return "%DEPENDS%";
+				case PKG_SECTION_FIELD_PROVIDES:
+					return "%PROVIDES%";
+				case PKG_SECTION_FIELD_BREAKS:
+					return "%CONFLICTS%";
+				case PKG_SECTION_FIELD_REPLACES:
+					return "%REPLACES%";
+				case PKG_SECTION_FIELD_MAINTAINER:
+					return "%PACKAGER%";
+				case PKG_SECTION_FIELD_HOMEPAGE:
+					return "%URL%";
+				case PKG_SECTION_FIELD_SIZE:
+					return "%CSIZE%";
+				case PKG_SECTION_FIELD_INSTALLED_SIZE:
+					return "%ISIZE%";
+				case PKG_SECTION_FIELD_FILENAME:
+					return "%FILENAME%";
 			}
 			
 			break;
@@ -908,6 +946,7 @@ int pkg_parse_section(
 	
 	/* Package */
 	key = pkg_get_field_name(repo->type, PKG_SECTION_FIELD_NAME);
+	
 	value = query_get_string(query, key);
 	
 	if (value == NULL) {
@@ -1229,8 +1268,12 @@ int repo_load_string(
 	
 	size_t index = 0;
 	ssize_t rsize = 0;
+	
 	strsplit_t split = {0};
 	strsplit_part_t part = {0};
+	
+	walkdir_t walkdir = {0};
+	const walkdir_item_t* item = NULL;
 	
 	hquery_t query = {0};
 	
@@ -1238,12 +1281,15 @@ int repo_load_string(
 	
 	char* section = NULL;
 	
+	char* location = NULL;
 	char* index_file = NULL;
 	
 	char* directory = NULL;
 	char* temporary_directory = NULL;
 	
 	const char* source = string;
+	const char* match = NULL;
+	const char* last_key = NULL;
 	
 	buffer_t buffer = {0};
 	
@@ -1261,29 +1307,32 @@ int repo_load_string(
 		goto end;
 	}
 	
-	index_file = malloc(
+	location = malloc(
 		strlen(temporary_directory) +
 		strlen(PATHSEP_S) +
-		strlen(KAPKINDEX) +
-		strlen(KPACKAGES) +
+		strlen(APK_INDEX_FILE) +
+		strlen(APT_INDEX_FILE) +
 		1
 	);
 	
-	if (index_file == NULL) {
+	if (location == NULL) {
 		err = APTERR_MEM_ALLOC_FAILURE;
 		goto end;
 	}
 	
-	strcpy(index_file, temporary_directory);
-	strcat(index_file, PATHSEP_S);
+	strcpy(location, temporary_directory);
+	strcat(location, PATHSEP_S);
 	
 	switch (repo->type) {
 		case REPO_TYPE_APT: {
-			strcat(index_file, "data");
+			strcat(location, "data");
 			break;
 		}
 		case REPO_TYPE_APK: {
-			strcat(index_file, KAPKINDEX);
+			strcat(location, APK_INDEX_FILE);
+			break;
+		}
+		case REPO_TYPE_PACMAN: {
 			break;
 		}
 		default: {
@@ -1305,57 +1354,113 @@ int repo_load_string(
 			goto end;
 		}
 		
-		loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", index_file);
+		loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", location);
 		
-		stream = fstream_open(index_file, FSTREAM_READ);
-		
-		if (stream == NULL) {
-			err = APTERR_FSTREAM_OPEN_FAILURE;
-			goto end;
+		if (repo->type == REPO_TYPE_PACMAN) {
+			err = buffer_init(&buffer, APT_MAX_PKG_INDEX_LEN);
+			
+			if (err != 0) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			if (walkdir_init(&walkdir, location) == -1) {
+				err = APTERR_FS_WALKDIR_FAILURE;
+				goto end;
+			}
+			
+			while ((item = walkdir_next(&walkdir)) != NULL) {
+				if (strcmp(item->name, ".") == 0 || strcmp(item->name, "..") == 0) {
+					continue;
+				}
+				
+				free(index_file);
+				
+				index_file = malloc(strlen(location) + strlen(item->name) + strlen(PATHSEP_S) + strlen(PACMAN_INDEX_FILE) + 1);
+				
+				if (index_file == NULL) {
+					err = APTERR_MEM_ALLOC_FAILURE;
+					goto end;
+				}
+				
+				strcpy(index_file, location);
+				strcat(index_file, item->name);
+				strcat(index_file, PATHSEP_S);
+				strcat(index_file, PACMAN_INDEX_FILE);
+				
+				loggln(LOG_VERBOSE, "Attempting to read package index file from '%s'", index_file);
+				
+				stream = fstream_open(index_file, FSTREAM_READ);
+				
+				if (stream == NULL) {
+					err = APTERR_FSTREAM_OPEN_FAILURE;
+					goto end;
+				}
+				
+				file_size = fsream_size(stream);
+				
+				if (file_size == FSTREAM_ERROR) {
+					err = APTERR_FSTREAM_TELL_FAILURE;
+					goto end;
+				}
+				
+				index = (size_t) file_size;
+				
+				if (index > (buffer.size - 1)) {
+					err = APTERR_REPO_PKG_INDEX_TOO_LARGE;
+					goto end;
+				}
+				
+				rsize = fstream_read(stream, buffer.data + buffer.offset, index);
+				
+				if (rsize == -1) {
+					err = APTERR_FSTREAM_READ_FAILURE;
+					goto end;
+				}
+				
+				fstream_close(stream);
+				
+				buffer.offset += index;
+			}
+			
+			buffer.data[buffer.offset] = '\0';
+		} else {
+			stream = fstream_open(location, FSTREAM_READ);
+			
+			if (stream == NULL) {
+				err = APTERR_FSTREAM_OPEN_FAILURE;
+				goto end;
+			}
+			
+			file_size = fsream_size(stream);
+			
+			if (file_size == FSTREAM_ERROR) {
+				err = APTERR_FSTREAM_TELL_FAILURE;
+				goto end;
+			}
+			
+			err = buffer_init(&buffer, (size_t) file_size + 1);
+			
+			if (err != 0) {
+				err = APTERR_MEM_ALLOC_FAILURE;
+				goto end;
+			}
+			
+			rsize = fstream_read(stream, buffer.data, (size_t) file_size);
+			
+			if (rsize == -1) {
+				err = APTERR_FSTREAM_READ_FAILURE;
+				goto end;
+			}
+			
+			buffer.data[rsize] = '\0';
+			buffer.offset = rsize;
 		}
 		
-		status = fstream_seek(stream, 0, FSTREAM_SEEK_END);
-		
-		if (status == -1) {
-			err = APTERR_FSTREAM_SEEK_FAILURE;
+		if (buffer.offset == 0) {
+			err = APTERR_REPO_EMPTY;
 			goto end;
 		}
-		
-		file_size = fstream_tell(stream);
-		
-		if (file_size == -1) {
-			err = APTERR_FSTREAM_TELL_FAILURE;
-			goto end;
-		}
-		
-		if (file_size == 0) {
-			err = APTERR_FSTREAM_READ_EMPTY_FILE;
-			goto end;
-		}
-		
-		status = fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN);
-		
-		if (status == -1) {
-			err = APTERR_FSTREAM_SEEK_FAILURE;
-			goto end;
-		}
-		
-		err = buffer_init(&buffer, (size_t) file_size + 1);
-		
-		if (err != 0) {
-			err = APTERR_MEM_ALLOC_FAILURE;
-			goto end;
-		}
-		
-		rsize = fstream_read(stream, buffer.data, (size_t) file_size);
-		
-		if (rsize == -1) {
-			err = APTERR_FSTREAM_READ_FAILURE;
-			goto end;
-		}
-		
-		buffer.data[rsize] = '\0';
-		buffer.offset = rsize;
 		
 		source = buffer.data;
 	}
@@ -1379,6 +1484,14 @@ int repo_load_string(
 		if (part.size == 0) {
 			if (section[0] == '\0') {
 				continue;
+			}
+			
+			if (repo->type == REPO_TYPE_PACMAN) {
+				match = strchr(part.begin, '%');
+				
+				if (match != NULL && strncmp(match, "%FILENAME%", 10) != 0) {
+					continue;
+				}
 			}
 			
 			query_free(&query);
@@ -1420,6 +1533,16 @@ int repo_load_string(
 		}
 		
 		strncat(section, part.begin, part.size);
+		
+		if (repo->type == REPO_TYPE_PACMAN) {
+			if (pkg_key_matches(repo->type, part.begin)) {
+				strcat(section, ": ");
+				last_key = part.begin;
+			} else if (strncmp(last_key, "%DEPENDS%", 9) == 0 || strncmp(last_key, "%PROVIDES%", 10) == 0 || strncmp(last_key, "%REPLACES%", 10) == 0 || strncmp(last_key, "%CONFLICTS%", 11) == 0) {
+				strcat(section, ", ");
+			}
+		}
+		
 	}
 	
 	if (cache) {
@@ -1880,6 +2003,25 @@ int repolist_load(repolist_t* const list) {
 			goto end;
 		}
 		
+		/* Format */
+		value = query_get_string(&query, "format");
+		
+		if (value == NULL) {
+			err = APTERR_REPO_CONF_MISSING_FIELD;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Read repository property (type = %s)", value);
+		
+		type = repotype_unstringify(value);
+		
+		if (type == REPO_TYPE_UNKNOWN) {
+			err = APTERR_REPO_UNKNOWN_FORMAT;
+			goto end;
+		}
+		
+		loggln(LOG_VERBOSE, "Repository format '%s' matched as value '%i'", value, type);
+		
 		/* Repository */
 		repository = query_get_string(&query, "repository");
 		
@@ -1919,25 +2061,6 @@ int repolist_load(repolist_t* const list) {
 		}
 		
 		loggln(LOG_VERBOSE, "Read repository property (architecture = %s)", architecture);
-		
-		/* Format */
-		value = query_get_string(&query, "format");
-		
-		if (value == NULL) {
-			err = APTERR_REPO_CONF_MISSING_FIELD;
-			goto end;
-		}
-		
-		loggln(LOG_VERBOSE, "Read repository property (type = %s)", value);
-		
-		type = repotype_unstringify(value);
-		
-		if (type == REPO_TYPE_UNKNOWN) {
-			err = APTERR_REPO_UNKNOWN_FORMAT;
-			goto end;
-		}
-		
-		loggln(LOG_VERBOSE, "Repository format '%s' matched as value '%i'", value, type);
 		
 		strsplit_init(&split, &part, resources, " ");
 		
@@ -2035,9 +2158,11 @@ int repolist_load(repolist_t* const list) {
 				strlen(PATHSEP_POSIX_S) +
 				strlen(KBINARY) + strlen(architecture) +
 				strlen(PATHSEP_POSIX_S) +
-				strlen(KPACKAGES) +
+				strlen(APT_INDEX_FILE) +
 				strlen(TAR_FILE_EXT) +
-				1 + 3 + 1
+				1 /* dot */ +
+				3 /* file extension */ +
+				1
 			);
 			
 			if (url == NULL) {
@@ -2046,15 +2171,26 @@ int repolist_load(repolist_t* const list) {
 			}
 			
 			strcpy(url, repository);
-			strcat(url, PATHSEP_POSIX_S);
+			
+			match = strchr(url, '\0') - strlen(PATHSEP_POSIX_S);
+			
+			if (strcmp(match, PATHSEP_POSIX_S) != 0) {
+				strcat(url, PATHSEP_POSIX_S);
+			}
 			
 			if (repo.type == REPO_TYPE_APT) {
 				strcat(url, KDISTS);
 				strcat(url, PATHSEP_POSIX_S);
 			}
 			
-			strcat(url, release);
-			strcat(url, PATHSEP_POSIX_S);
+			if (repo.type == REPO_TYPE_PACMAN) {
+				strcat(url, architecture);
+				strcat(url, PATHSEP_POSIX_S);
+			} else {
+				strcat(url, release);
+				strcat(url, PATHSEP_POSIX_S);
+			}
+			
 			strncat(url, part.begin, part.size);
 			strcat(url, PATHSEP_POSIX_S);
 			
@@ -2062,17 +2198,24 @@ int repolist_load(repolist_t* const list) {
 				strcat(url, KBINARY);
 			}
 			
-			strcat(url, architecture);
-			strcat(url, PATHSEP_POSIX_S);
+			if (repo.type != REPO_TYPE_PACMAN) {
+				strcat(url, architecture);
+				strcat(url, PATHSEP_POSIX_S);
+			}
 			
 			switch (repo.type) {
 				case REPO_TYPE_APT: {
-					strcat(url, KPACKAGES);
+					strcat(url, APT_INDEX_FILE);
 					break;
 				}
 				case REPO_TYPE_APK: {
-					strcat(url, KAPKINDEX);
+					strcat(url, APK_INDEX_FILE);
 					strcat(url, TAR_FILE_EXT);
+					break;
+				}
+				case REPO_TYPE_PACMAN: {
+					strncat(url, part.begin, part.size);
+					strcat(url, DB_FILE_EXT);
 					break;
 				}
 				default: {
@@ -2090,7 +2233,7 @@ int repolist_load(repolist_t* const list) {
 				repo.index = repo_index;
 				err = repo_load(&repo, url, repository, options->cache);
 				
-				if (err == APTERR_WCURL_REQUEST_FAILURE) {
+				if (err == APTERR_WCURL_REQUEST_FAILURE || err == APTERR_REPO_EMPTY) {
 					continue;
 				}
 				
@@ -2099,6 +2242,15 @@ int repolist_load(repolist_t* const list) {
 				}
 				
 				break;
+			}
+			
+			if (err == APTERR_REPO_EMPTY) {
+				repo_free(&repo);
+				continue;
+			}
+				
+			if (err != APTERR_SUCCESS) {
+				goto end;
 			}
 			
 			err = repolist_append(list, &repo);
