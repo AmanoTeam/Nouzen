@@ -226,8 +226,9 @@ char* get_local_temp_dir(void) {
 	strcpy(temporary_directory, directory);
 	strcat(temporary_directory, SOURCES_TEMPORARY_DIRECTORY);
 	
+	free(directory);
+	
 	if (create_directory(temporary_directory) != 0) {
-		free(directory);
 		free(temporary_directory);
 		return NULL;
 	}
@@ -1566,7 +1567,7 @@ int repo_load_string(
 			if (pkg_key_matches(repo->type, part.begin)) {
 				strcat(section, ": ");
 				last_key = part.begin;
-			} else if (strncmp(last_key, "%DEPENDS%", 9) == 0 || strncmp(last_key, "%PROVIDES%", 10) == 0 || strncmp(last_key, "%REPLACES%", 10) == 0 || strncmp(last_key, "%CONFLICTS%", 11) == 0) {
+			} else if (strncmp(last_key, "%DEPENDS%", 9) == 0 || strncmp(last_key, "%PROVIDES%", 10) == 0 || strncmp(last_key, "%REPLACES%", 10) == 0 || strncmp(last_key, "%CONFLICTS%", 11) == 0 || strncmp(last_key, "%CHECKDEPENDS%", 14) == 0) {
 				strcat(section, ", ");
 			}
 		}
@@ -1582,9 +1583,13 @@ int repo_load_string(
 	remove_directory_contents(temporary_directory);
 	
 	query_free(&query);
+	walkdir_free(&walkdir);
+	buffer_free(&buffer);
+	
 	free(section);
 	free(temporary_directory);
-	buffer_free(&buffer);
+	free(index_file);
+	free(location);
 	
 	return err;
 	
@@ -2412,6 +2417,7 @@ int repolist_load(repolist_t* const list) {
 	walkdir_free(&walkdir);
 	
 	if (err != APTERR_SUCCESS) {
+		repo_free(&repo);
 		repolist_free(list);
 	}
 	

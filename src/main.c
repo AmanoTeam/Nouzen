@@ -313,6 +313,7 @@ static int repolist_perform_search(repolist_t* const repolist, const char* const
 	
 	show_cursor();
 	cir_free(&cir);
+	pkgs_free(&pkgs, 0);
 	
 	return err;
 	

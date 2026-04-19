@@ -192,6 +192,9 @@ void pkg_free(pkg_t* const pkg) {
 	free(pkg->version);
 	pkg->version = NULL;
 	
+	free(pkg->description);
+	pkg->description = NULL;
+	
 	if (pkg->resolved) {
 		pkgs_free(pkg->depends, 0);
 		pkgs_free(pkg->breaks, 0);

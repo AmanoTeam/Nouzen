@@ -25,7 +25,8 @@ static const char* const SSL_CERTIFICATE_LOCATIONS[] = {
 #elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
 	"/etc/ssl/cert.pem",
 	"/etc/ssl/certs/ca-certificates.crt",
-	"/usr/local/share/certs/ca-root-nss.crt"
+	"/etc/openssl/certs/ca-certificates.crt",
+	"/usr/local/share/certs/ca-root-nss.crt",
 #else
 	"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
 	"/etc/pki/tls/certs/ca-bundle.crt",
@@ -65,23 +66,9 @@ static int sslcerts_load_file(const char* const name) {
 		goto end;
 	}
 	
-	status = fstream_seek(stream, 0, FSTREAM_SEEK_END);
+	file_size = fsream_size(stream);
 	
-	if (status == -1) {
-		err = SSLCERTS_ERROR;
-		goto end;
-	}
-	
-	file_size = fstream_tell(stream);
-	
-	if (file_size == FSTREAM_ERROR || file_size == FSTREAM_EOF) {
-		err = SSLCERTS_ERROR;
-		goto end;
-	}
-	
-	status = fstream_seek(stream, 0, FSTREAM_SEEK_BEGIN);
-	
-	if (status == FSTREAM_ERROR) {
+	if (file_size == FSTREAM_ERROR) {
 		err = SSLCERTS_ERROR;
 		goto end;
 	}
@@ -187,6 +174,12 @@ int sslcerts_load_certificates(CURL* const curl) {
 	
 	if (err != SSLCERTS_SUCCESS) {
 		goto end;
+	}
+	
+	code = curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, cacerts);
+	
+	if (code != CURLE_OK) {
+		err = SSLCERTS_ERROR;
 	}
 	
 	end:;
