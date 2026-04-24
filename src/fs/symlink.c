@@ -127,7 +127,7 @@ char* get_symlink(const char* const path) {
 			goto end;
 		}
 		
-		size = readlink(path, location, sizeof(location));
+		size = readlink(path, location, PATH_MAX);
 		
 		if (size == -1) {
 			free(location);
