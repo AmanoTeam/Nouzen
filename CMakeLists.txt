@@ -827,6 +827,7 @@ endif()
 
 target_link_libraries(
 	nz
+	PRIVATE
 	libcurl_shared
 	archive
 )
